@@ -42,6 +42,18 @@ func initLogging() {
 	log.SetLevel(log.InfoLevel)
 }
 
+// TODO: Read in kafka configuration parameters from yaml file
+// TODO: Read in aggregation period and aggregation specifications from yaml file
+// TODO: Publish aggregated metrics to Kafka
+// TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
+// TODO: Create aggreagations to handle both late arriving and early arriving metrics based on the metric timestamp and allowed tolerance
+// TODO: Handle metrics that arrive late or in the future within some tolerance of the current periods start/end time
+// TODO: Use the metric timestamp (event time) to accumulate the aggregation into the appropriate last, current and future aggregation window
+// TODO: Add support for grouping on dimensions
+// TODO: Publish aggregations at discrete intervals + lag time. For example, 10 minutes past the hour.
+// TODO: Add Prometheus Client library and report metrics
+// TODO: Create Helm Charts
+// TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 func main() {
 	initLogging()
 
