@@ -62,8 +62,7 @@ func main() {
 	initLogging()
 
 	if len(os.Args) < 4 {
-		log.Fatal(os.Stderr, "Usage: %s <broker> <group> <topics..>\n",
-			os.Args[0])
+		log.Errorf("Usage: %s <broker> <group> <topics..>", os.Args[0])
 	}
 
 	broker := os.Args[1]
@@ -82,10 +81,10 @@ func main() {
 		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"}})
 
 	if err != nil {
-		log.Fatal(os.Stderr, "Failed to create consumer: %s\n", err)
+		log.Fatalf("Failed to create consumer: %s", err)
 	}
 
-	log.Info("Created monasca-aggregation %v\n", c)
+	log.Infof("Created monasca-aggregation %v", c)
 
 	err = c.SubscribeTopics(topics, nil)
 
@@ -96,36 +95,35 @@ func main() {
 	for run == true {
 		select {
 		case sig := <-sigchan:
-			log.Info("Caught signal %v: terminating\n", sig)
+			log.Infof("Caught signal %v: terminating", sig)
 			run = false
 
 		case ev := <-c.Events():
 			switch e := ev.(type) {
 			case kafka.AssignedPartitions:
-				log.Info(os.Stderr, "%% %v\n", e)
+				log.Infof("%% %v", e)
 				c.Assign(e.Partitions)
 			case kafka.RevokedPartitions:
-				log.Info(os.Stderr, "%% %v\n", e)
+				log.Infof("%% %v", e)
 				c.Unassign()
 			case *kafka.Message:
 				metricEnvelope := models.MetricEnvelope{}
 				err = json.Unmarshal([]byte(e.Value), &metricEnvelope)
 				if err != nil {
-					log.Warn("%% Invalid metric envelope on %s:\n%s\n",
-						e.TopicPartition, string(e.Value))
-				} else {
-					var metric = metricEnvelope.Metric
-					for _, aggregationSpecification := range aggregationSpecifications {
-						if metric.Name == aggregationSpecification.FilteredMetricName {
-							aggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
-						}
-					}
-					log.Debug(metricEnvelope)
+					log.Warnf("%% Invalid metric envelope on %s:%s", e.TopicPartition, string(e.Value))
+					continue
 				}
+				var metric = metricEnvelope.Metric
+				for _, aggregationSpecification := range aggregationSpecifications {
+					if metric.Name == aggregationSpecification.FilteredMetricName {
+						aggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
+					}
+				}
+				log.Debug(metricEnvelope)
 			case kafka.PartitionEOF:
-				log.Info("%% Reached %v\n", e)
+				log.Infof("%% Reached %v", e)
 			case kafka.Error:
-				log.Error(os.Stderr, "%% Error: %v\n", e)
+				log.Errorf("%% Error: %v", e)
 				run = false
 			}
 
@@ -134,6 +132,6 @@ func main() {
 		}
 	}
 
-	log.Info("Closing monasca-aggregation\n")
+	log.Info("Closing monasca-aggregation")
 	c.Close()
 }
