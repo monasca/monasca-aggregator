@@ -18,7 +18,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
-	"fmt"
 	"os/signal"
 	"syscall"
 	"github.hpe.com/UNCLE/monasca-aggregation/models"
@@ -28,7 +27,7 @@ import (
 
 const aggregationPeriod = time.Minute
 
-const aggregationSpecifications = []models.AggregationSpecification{
+var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation1", "metric1", "aggregated-metric1"},
 	{"Aggregation2", "metric2", "aggregated-metric2"},
 }
@@ -39,7 +38,12 @@ func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.DebugLevel)
+}
+
+func publishAggregations() {
+	log.Debug(aggregations)
+	aggregations = map[string]float64{}
 }
 
 // TODO: Read in kafka configuration parameters from yaml file
@@ -58,9 +62,8 @@ func main() {
 	initLogging()
 
 	if len(os.Args) < 4 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <broker> <group> <topics..>\n",
+		log.Fatal(os.Stderr, "Usage: %s <broker> <group> <topics..>\n",
 			os.Args[0])
-		os.Exit(1)
 	}
 
 	broker := os.Args[1]
@@ -79,11 +82,10 @@ func main() {
 		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"}})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create consumer: %s\n", err)
-		os.Exit(1)
+		log.Fatal(os.Stderr, "Failed to create consumer: %s\n", err)
 	}
 
-	fmt.Printf("Created Consumer %v\n", c)
+	log.Info("Created monasca-aggregation %v\n", c)
 
 	err = c.SubscribeTopics(topics, nil)
 
@@ -94,16 +96,16 @@ func main() {
 	for run == true {
 		select {
 		case sig := <-sigchan:
-			fmt.Printf("Caught signal %v: terminating\n", sig)
+			log.Info("Caught signal %v: terminating\n", sig)
 			run = false
 
 		case ev := <-c.Events():
 			switch e := ev.(type) {
 			case kafka.AssignedPartitions:
-				fmt.Fprintf(os.Stderr, "%% %v\n", e)
+				log.Info(os.Stderr, "%% %v\n", e)
 				c.Assign(e.Partitions)
 			case kafka.RevokedPartitions:
-				fmt.Fprintf(os.Stderr, "%% %v\n", e)
+				log.Info(os.Stderr, "%% %v\n", e)
 				c.Unassign()
 			case *kafka.Message:
 				metricEnvelope := models.MetricEnvelope{}
@@ -114,25 +116,24 @@ func main() {
 				} else {
 					var metric = metricEnvelope.Metric
 					for _, aggregationSpecification := range aggregationSpecifications {
-						if metric.Name == aggregationSpecification.OriginalMetricName {
+						if metric.Name == aggregationSpecification.FilteredMetricName {
 							aggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
 						}
 					}
-					fmt.Print(metricEnvelope)
+					log.Debug(metricEnvelope)
 				}
 			case kafka.PartitionEOF:
-				fmt.Printf("%% Reached %v\n", e)
+				log.Info("%% Reached %v\n", e)
 			case kafka.Error:
-				fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
+				log.Error(os.Stderr, "%% Error: %v\n", e)
 				run = false
 			}
 
 		case <-aggregationTicker.C:
-			fmt.Print(aggregations)
-			aggregations = map[string]float64{}
+			publishAggregations()
 		}
 	}
 
-	fmt.Printf("Closing consumer\n")
+	log.Info("Closing monasca-aggregation\n")
 	c.Close()
 }
