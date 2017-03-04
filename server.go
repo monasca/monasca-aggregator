@@ -26,21 +26,21 @@ import (
 	"time"
 )
 
+const aggregationPeriod = time.Minute
+
+const aggregationSpecifications = []models.AggregationSpecification{
+	{"Aggregation1", "metric1", "aggregated-metric1"},
+	{"Aggregation2", "metric2", "aggregated-metric2"},
+}
+
+var aggregations = map[string]float64{}
+
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 }
-
-const aggregationPeriod = time.Minute
-
-var aggregationSpecifications = []models.AggregationSpecification{
-	{"Aggregation1", "metric1", "aggregated-metric1"},
-	{"Aggregation2", "metric2", "aggregated-metric2"},
-}
-
-var aggregations = map[string]float64{}
 
 func main() {
 	initLogging()
@@ -102,8 +102,8 @@ func main() {
 				} else {
 					var metric = metricEnvelope.Metric
 					for _, aggregationSpecification := range aggregationSpecifications {
-						if metric.Name == aggregationSpecification.MetricSrcName {
-							aggregations[aggregationSpecification.MetricDstName] += metric.Value
+						if metric.Name == aggregationSpecification.OriginalMetricName {
+							aggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
 						}
 					}
 					fmt.Print(metricEnvelope)

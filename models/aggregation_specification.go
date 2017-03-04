@@ -1,7 +1,7 @@
 package models
 
 type AggregationSpecification struct {
-	Name          string
-	MetricSrcName string
-	MetricDstName string
+	Name                 string
+	OriginalMetricName   string
+	AggregatedMetricName string
 }
