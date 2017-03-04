@@ -43,6 +43,10 @@ func initLogging() {
 
 func publishAggregations() {
 	log.Debug(aggregations)
+
+	// TODO: Really publish the aggreations to Kafka
+	// TODO: Advance the Kafka offsets
+	// TODO: Clear aggregations for the timed window that was just published
 	aggregations = map[string]float64{}
 }
 
@@ -51,10 +55,10 @@ func publishAggregations() {
 // TODO: Publish aggregated metrics to Kafka
 // TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
 // TODO: Create aggreagations to handle both late arriving and early arriving metrics based on the metric timestamp and allowed tolerance
-// TODO: Handle metrics that arrive late or in the future within some tolerance of the current periods start/end time
+// TODO: Handle metrics that arrive late or in the future within some tolerance of the current windows start/end time
 // TODO: Use the metric timestamp (event time) to accumulate the aggregation into the appropriate last, current and future aggregation window
 // TODO: Add support for grouping on dimensions
-// TODO: Publish aggregations at discrete intervals + lag time. For example, 10 minutes past the hour.
+// TODO: Publish aggregations at window boundaries + lag time. For example, 10 minutes past the hour.
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
