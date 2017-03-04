@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"github.hpe.com/UNCLE/monasca-aggregation/models"
 	"encoding/json"
+	"time"
 )
 
 func initLogging() {
@@ -31,6 +32,8 @@ func initLogging() {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
 }
+
+const aggregationPeriod = time.Minute
 
 var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation1", "metric1", "aggregated-metric1"},
@@ -72,6 +75,8 @@ func main() {
 
 	err = c.SubscribeTopics(topics, nil)
 
+	aggregationTicker := time.NewTicker(aggregationPeriod)
+
 	run := true
 
 	for run == true {
@@ -101,8 +106,7 @@ func main() {
 							aggregations[aggregationSpecification.MetricDstName] += metric.Value
 						}
 					}
-					//fmt.Print(metricEnvelope)
-					fmt.Print(aggregations)
+					fmt.Print(metricEnvelope)
 				}
 			case kafka.PartitionEOF:
 				fmt.Printf("%% Reached %v\n", e)
@@ -110,6 +114,9 @@ func main() {
 				fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
 				run = false
 			}
+		case <-aggregationTicker.C:
+			fmt.Print(aggregations)
+			aggregations = map[string]float64{}
 		}
 	}
 
