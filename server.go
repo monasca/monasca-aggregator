@@ -114,6 +114,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
 				run = false
 			}
+
 		case <-aggregationTicker.C:
 			fmt.Print(aggregations)
 			aggregations = map[string]float64{}
