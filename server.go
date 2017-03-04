@@ -32,6 +32,13 @@ func initLogging() {
 	log.SetLevel(log.InfoLevel)
 }
 
+var aggregationSpecifications = []models.AggregationSpecification{
+	{"Aggregation1", "metric1", "aggregated-metric1"},
+	{"Aggregation2", "metric2", "aggregated-metric2"},
+}
+
+var aggregations = map[string]float64{}
+
 func main() {
 	initLogging()
 
@@ -85,11 +92,17 @@ func main() {
 				metricEnvelope := models.MetricEnvelope{}
 				err = json.Unmarshal([]byte(e.Value), &metricEnvelope)
 				if err != nil {
-					fmt.Printf("%% Message on %s:\n%s\n",
+					log.Warn("%% Invalid metric envelope on %s:\n%s\n",
 						e.TopicPartition, string(e.Value))
-					panic(err.Error())
 				} else {
-					fmt.Print(metricEnvelope)
+					var metric = metricEnvelope.Metric
+					for _, aggregationSpecification := range aggregationSpecifications {
+						if metric.Name == aggregationSpecification.MetricSrcName {
+							aggregations[aggregationSpecification.MetricDstName] += metric.Value
+						}
+					}
+					//fmt.Print(metricEnvelope)
+					fmt.Print(aggregations)
 				}
 			case kafka.PartitionEOF:
 				fmt.Printf("%% Reached %v\n", e)
