@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-const aggregationPeriod = time.Minute
+const windowSize = time.Minute
 
 var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation1", "metric1", "aggregated-metric1"},
@@ -62,6 +62,8 @@ func publishAggregations() {
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
+// TODO: Guarantee at least once publishing of aggregated metrics
+// TODO: Handle start/stop, fail/restart
 func main() {
 	initLogging()
 
@@ -92,7 +94,7 @@ func main() {
 
 	err = c.SubscribeTopics(topics, nil)
 
-	aggregationTicker := time.NewTicker(aggregationPeriod)
+	aggregationTicker := time.NewTicker(windowSize)
 
 	run := true
 
