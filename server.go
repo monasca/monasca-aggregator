@@ -25,29 +25,34 @@ import (
 	"time"
 )
 
-const windowSize = time.Minute
+const windowSize = time.Minute/6
 
 var aggregationSpecifications = []models.AggregationSpecification{
+	{"Aggregation0", "metric0", "aggregated-metric0"},
 	{"Aggregation1", "metric1", "aggregated-metric1"},
 	{"Aggregation2", "metric2", "aggregated-metric2"},
 }
 
-var aggregations = map[string]float64{}
+var timeWindowedAggregations = map[int64]map[string]float64{}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 }
 
 func publishAggregations() {
-	log.Debug(aggregations)
+	log.Debug(timeWindowedAggregations)
+	var previousTimedWindow = int64(time.Now().Unix())/int64(windowSize.Seconds()) - 1
+	var windowedAggregations = timeWindowedAggregations[previousTimedWindow]
+	log.Infof("previousTimedWindow: %d", previousTimedWindow)
+	log.Info(windowedAggregations)
 
 	// TODO: Really publish the aggreations to Kafka
 	// TODO: Advance the Kafka offsets
-	// TODO: Clear aggregations for the timed window that was just published
-	aggregations = map[string]float64{}
+	// TODO: Delete windowedAggregations for the current window Id that was just published
+	// delete(timeWindowedAggregations, previousTimedWindow)
 }
 
 // TODO: Read in kafka configuration parameters from yaml file
@@ -90,7 +95,7 @@ func main() {
 		log.Fatalf("Failed to create consumer: %s", err)
 	}
 
-	log.Infof("Created monasca-aggregation %v", c)
+	log.Infof("Started monasca-aggregation %v", c)
 
 	err = c.SubscribeTopics(topics, nil)
 
@@ -120,14 +125,21 @@ func main() {
 					continue
 				}
 				var metric = metricEnvelope.Metric
+				var eventTimedWindow = metric.Timestamp/(1000*int64(windowSize.Seconds()))
+
 				for _, aggregationSpecification := range aggregationSpecifications {
 					if metric.Name == aggregationSpecification.FilteredMetricName {
-						aggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
+						var windowedAggregations = timeWindowedAggregations[eventTimedWindow]
+						if windowedAggregations == nil {
+							timeWindowedAggregations[eventTimedWindow] = make(map[string]float64)
+							windowedAggregations = timeWindowedAggregations[eventTimedWindow]
+						}
+						windowedAggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
 					}
 				}
 				log.Debug(metricEnvelope)
 			case kafka.PartitionEOF:
-				log.Infof("%% Reached %v", e)
+				//log.Infof("%% Reached %v", e)
 			case kafka.Error:
 				log.Errorf("%% Error: %v", e)
 				run = false
@@ -138,6 +150,6 @@ func main() {
 		}
 	}
 
-	log.Info("Closing monasca-aggregation")
+	log.Info("Stopped monasca-aggregation")
 	c.Close()
 }
