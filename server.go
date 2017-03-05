@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-const windowSize = time.Minute/6
+const windowSize = time.Minute/6 // 10 seconds
 
 var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation0", "metric0", "aggregated-metric0"},
@@ -33,7 +33,7 @@ var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation2", "metric2", "aggregated-metric2"},
 }
 
-var timeWindowedAggregations = map[int64]map[string]float64{}
+var timedWindowAggregations = map[int64]map[string]float64{}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -43,16 +43,16 @@ func initLogging() {
 }
 
 func publishAggregations() {
-	log.Debug(timeWindowedAggregations)
+	log.Debug(timedWindowAggregations)
 	var previousTimedWindow = int64(time.Now().Unix())/int64(windowSize.Seconds()) - 1
-	var windowedAggregations = timeWindowedAggregations[previousTimedWindow]
+	var windowedAggregations = timedWindowAggregations[previousTimedWindow]
 	log.Infof("previousTimedWindow: %d", previousTimedWindow)
 	log.Info(windowedAggregations)
 
-	// TODO: Really publish the aggreations to Kafka
+	// TODO: Publish the aggreations to Kafka
 	// TODO: Advance the Kafka offsets
 	// TODO: Delete windowedAggregations for the current window Id that was just published
-	// delete(timeWindowedAggregations, previousTimedWindow)
+	// delete(timedWindowAggregations, previousTimedWindow)
 }
 
 // TODO: Read in kafka configuration parameters from yaml file
@@ -127,12 +127,12 @@ func main() {
 
 				for _, aggregationSpecification := range aggregationSpecifications {
 					if metric.Name == aggregationSpecification.FilteredMetricName {
-						var windowedAggregations = timeWindowedAggregations[eventTimedWindow]
-						if windowedAggregations == nil {
-							timeWindowedAggregations[eventTimedWindow] = make(map[string]float64)
-							windowedAggregations = timeWindowedAggregations[eventTimedWindow]
+						var windowAggregations = timedWindowAggregations[eventTimedWindow]
+						if windowAggregations == nil {
+							timedWindowAggregations[eventTimedWindow] = make(map[string]float64)
+							windowAggregations = timedWindowAggregations[eventTimedWindow]
 						}
-						windowedAggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
+						windowAggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
 					}
 				}
 				log.Debug(metricEnvelope)

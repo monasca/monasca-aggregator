@@ -56,7 +56,7 @@ func main() {
 
 	for {
 
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 100; i++ {
 
 			var metricEnvelope = models.MetricEnvelope{
 				models.Metric{"metric" + strconv.Itoa(i), map[string]string{}, int64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
@@ -67,13 +67,13 @@ func main() {
 
 			p.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
 
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(100 * time.Microsecond)
 		}
 
 		// wait for delivery report goroutine to finish
 		_ = <-doneChan
 
-		fmt.Printf("Done waiting\n")
+		//fmt.Printf("Done waiting\n")
 
 	}
 
