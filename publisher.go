@@ -59,7 +59,7 @@ func main() {
 		for i := 0; i < 100; i++ {
 
 			var metricEnvelope = models.MetricEnvelope{
-				models.Metric{"metric" + strconv.Itoa(i), map[string]string{}, int64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
+				models.Metric{"metric" + strconv.Itoa(i), map[string]string{}, float64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
 				map[string]string{},
 				int64(time.Now().Unix() * 1000)}
 
