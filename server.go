@@ -47,7 +47,7 @@ func initLogging() {
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
 	now := time.Now().Unix()
-	completed := now%int64(windowSize.Seconds()) - int64(windowLag.Seconds())
+	completed := now % int64(windowSize.Seconds()) - int64(windowLag.Seconds())
 	remaining := int64(windowSize.Seconds()) - completed
 	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
 	return firstTick
@@ -55,15 +55,17 @@ func firstTick() *time.Timer {
 
 func publishAggregations() {
 	log.Debug(timeWindowAggregations)
-	var previousTimeWindow = int64(time.Now().Unix())/int64(windowSize.Seconds()) - 1
-	var windowAggregations = timeWindowAggregations[previousTimeWindow]
-	log.Infof("previousTimeWindow: %d", previousTimeWindow)
+	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
+	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
+	var activeTimeWindow = currentTimeWindow - windowLagCount
+	var windowAggregations = timeWindowAggregations[activeTimeWindow]
+	log.Infof("activeTimeWindow: %d", activeTimeWindow)
 	log.Info(windowAggregations)
 
 	// TODO: Publish the aggreations to Kafka
 	// TODO: Advance the Kafka offsets
 	// TODO: Delete windowAggregations for the current window Id that was just published
-	// delete(timeWindowAggregations, previousTimeWindow)
+	delete(timeWindowAggregations, activeTimeWindow)
 }
 
 // TODO: Read in kafka configuration parameters from yaml file
@@ -72,7 +74,6 @@ func publishAggregations() {
 // TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
 // TODO: Potentially, restrict metrics to a previous, current and next time windowed aggregation.
 // TODO: Add support for grouping on dimensions
-// TODO: Publish aggregations at window boundaries + lag time aligned to the epoch. For example, 10 minutes past the hour.
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
 // TODO: Add support for different source and destination Kafka topics.
