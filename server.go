@@ -26,6 +26,7 @@ import (
 )
 
 const windowSize = time.Minute/6 // 10 seconds
+const windowLag = 2*time.Second
 
 var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation0", "metric0", "aggregated-metric0"},
@@ -40,6 +41,16 @@ func initLogging() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
+}
+
+// Return a timer for when the first window should be processed
+// TODO: Check this math to account for all boundary conditions and large lag times
+func firstTick() *time.Timer {
+	now := time.Now().Unix()
+	completed := now%int64(windowSize.Seconds()) - int64(windowLag.Seconds())
+	remaining := int64(windowSize.Seconds()) - completed
+	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
+	return firstTick
 }
 
 func publishAggregations() {
@@ -100,12 +111,8 @@ func main() {
 
 	err = c.SubscribeTopics(topics, nil)
 
-	now := time.Now().Unix()
-	completed := now%int64(windowSize.Seconds())
-	remaining := int64(windowSize.Seconds()) - completed
-	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
-	ticker := time.NewTicker(windowSize)
-	ticker.Stop()
+	firstTick := firstTick()
+	var ticker *time.Ticker = new(time.Ticker)
 
 	run := true
 
