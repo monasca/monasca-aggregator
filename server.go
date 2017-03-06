@@ -105,12 +105,12 @@ func main() {
 	initLogging()
 
 	if len(os.Args) < 4 {
-		log.Errorf("Usage: %s <broker> <group> <topics..>", os.Args[0])
+		log.Errorf("Usage: %s <broker> <group> <topic>", os.Args[0])
 	}
 
 	broker := os.Args[1]
 	group := os.Args[2]
-	topics := os.Args[3:]
+	topic := os.Args[3]
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -129,7 +129,7 @@ func main() {
 
 	log.Infof("Started monasca-aggregation %v", c)
 
-	err = c.SubscribeTopics(topics, nil)
+	err = c.Subscribe(topic, nil)
 
 	if err != nil {
 		log.Fatalf("Failed to subscribe to topics %c", err)
@@ -219,12 +219,12 @@ func main() {
 			ticker = time.NewTicker(windowSize)
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &topics[0])
+			publishAggregations(p.ProduceChannel(), &topic)
 
 		case <- ticker.C:
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &topics[0])
+			publishAggregations(p.ProduceChannel(), &topic)
 		}
 	}
 
