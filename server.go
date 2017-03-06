@@ -33,7 +33,7 @@ var aggregationSpecifications = []models.AggregationSpecification{
 	{"Aggregation2", "metric2", "aggregated-metric2"},
 }
 
-var timedWindowAggregations = map[int64]map[string]float64{}
+var timeWindowAggregations = map[int64]map[string]float64{}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -43,16 +43,16 @@ func initLogging() {
 }
 
 func publishAggregations() {
-	log.Debug(timedWindowAggregations)
-	var previousTimedWindow = int64(time.Now().Unix())/int64(windowSize.Seconds()) - 1
-	var windowedAggregations = timedWindowAggregations[previousTimedWindow]
-	log.Infof("previousTimedWindow: %d", previousTimedWindow)
-	log.Info(windowedAggregations)
+	log.Debug(timeWindowAggregations)
+	var previousTimeWindow = int64(time.Now().Unix())/int64(windowSize.Seconds()) - 1
+	var windowAggregations = timeWindowAggregations[previousTimeWindow]
+	log.Infof("previousTimeWindow: %d", previousTimeWindow)
+	log.Info(windowAggregations)
 
 	// TODO: Publish the aggreations to Kafka
 	// TODO: Advance the Kafka offsets
-	// TODO: Delete windowedAggregations for the current window Id that was just published
-	// delete(timedWindowAggregations, previousTimedWindow)
+	// TODO: Delete windowAggregations for the current window Id that was just published
+	// delete(timeWindowAggregations, previousTimeWindow)
 }
 
 // TODO: Read in kafka configuration parameters from yaml file
@@ -61,12 +61,15 @@ func publishAggregations() {
 // TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
 // TODO: Potentially, restrict metrics to a previous, current and next time windowed aggregation.
 // TODO: Add support for grouping on dimensions
-// TODO: Publish aggregations at window boundaries + lag time. For example, 10 minutes past the hour.
+// TODO: Publish aggregations at window boundaries + lag time aligned to the epoch. For example, 10 minutes past the hour.
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
+// TODO: Add support for different source and destination Kafka topics.
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO: Guarantee at least once publishing of aggregated metrics
 // TODO: Handle start/stop, fail/restart
+// TODO: Allow start/end consumer offsets to be specified as parameters.
+// TODO: Allow start/end aggregation period to be specified.
 func main() {
 	initLogging()
 
@@ -97,7 +100,12 @@ func main() {
 
 	err = c.SubscribeTopics(topics, nil)
 
-	aggregationTicker := time.NewTicker(windowSize)
+	now := time.Now().Unix()
+	completed := now%int64(windowSize.Seconds())
+	remaining := int64(windowSize.Seconds()) - completed
+	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
+	ticker := time.NewTicker(windowSize)
+	ticker.Stop()
 
 	run := true
 
@@ -123,14 +131,14 @@ func main() {
 					continue
 				}
 				var metric = metricEnvelope.Metric
-				var eventTimedWindow = metric.Timestamp/(1000*int64(windowSize.Seconds()))
+				var eventTimeWindow = metric.Timestamp/(1000*int64(windowSize.Seconds()))
 
 				for _, aggregationSpecification := range aggregationSpecifications {
 					if metric.Name == aggregationSpecification.FilteredMetricName {
-						var windowAggregations = timedWindowAggregations[eventTimedWindow]
+						var windowAggregations = timeWindowAggregations[eventTimeWindow]
 						if windowAggregations == nil {
-							timedWindowAggregations[eventTimedWindow] = make(map[string]float64)
-							windowAggregations = timedWindowAggregations[eventTimedWindow]
+							timeWindowAggregations[eventTimeWindow] = make(map[string]float64)
+							windowAggregations = timeWindowAggregations[eventTimeWindow]
 						}
 						windowAggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
 					}
@@ -143,7 +151,11 @@ func main() {
 				run = false
 			}
 
-		case <-aggregationTicker.C:
+		case <- firstTick.C:
+			ticker = time.NewTicker(windowSize)
+			publishAggregations()
+
+		case <- ticker.C:
 			publishAggregations()
 		}
 	}
