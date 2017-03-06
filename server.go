@@ -15,14 +15,16 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"encoding/json"
 	"os"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"os/signal"
 	"syscall"
-	"github.hpe.com/UNCLE/monasca-aggregation/models"
-	"encoding/json"
 	"time"
+
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+	log "github.com/Sirupsen/logrus"
+
+	"github.hpe.com/UNCLE/monasca-aggregation/models"
 )
 
 const windowSize = time.Minute/6 // 10 seconds
@@ -53,16 +55,33 @@ func firstTick() *time.Timer {
 	return firstTick
 }
 
-func publishAggregations() {
+func publishAggregations(outbound chan *kafka.Message, topic *string) {
+	// TODO make timestamp assignment the beginning of the aggregation window
 	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
-	var activeTimeWindow = currentTimeWindow - windowLagCount
+	var activeTimeWindow = currentTimeWindow + windowLagCount
 	var windowAggregations = timeWindowAggregations[activeTimeWindow]
+	log.Infof("currentTimeWindow: %d", currentTimeWindow)
 	log.Infof("activeTimeWindow: %d", activeTimeWindow)
 	log.Info(windowAggregations)
 
-	// TODO: Publish the aggreations to Kafka
+	for name, value := range windowAggregations {
+		var metricEnvelope = models.MetricEnvelope{
+			models.Metric{
+				name,
+				map[string]string{},
+				float64(int64(time.Now().Unix()) * 1000),
+				value,
+				map[string]string{}},
+			map[string]string{},
+			int64(time.Now().Unix() * 1000)}
+
+		value, _ := json.Marshal(metricEnvelope)
+
+		outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+	}
+
 	// TODO: Advance the Kafka offsets
 	// TODO: Delete windowAggregations for the current window Id that was just published
 	delete(timeWindowAggregations, activeTimeWindow)
@@ -112,10 +131,46 @@ func main() {
 
 	err = c.SubscribeTopics(topics, nil)
 
+	if err != nil {
+		log.Fatalf("Failed to subscribe to topics %c", err)
+	}
+
+
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
+
+	if err != nil {
+		log.Fatalf("Failed to create producer: %s", err)
+	}
+
+	log.Infof("Created Producer %v", p)
+
+	// Set up producer events handling
+	go func() {
+	outer:
+		for e := range p.Events() {
+			switch ev := e.(type) {
+			case *kafka.Message:
+				m := ev
+				if m.TopicPartition.Error != nil {
+					log.Errorf("Delivery failed: %v\n", m.TopicPartition.Error)
+				} else {
+					log.Infof("Delivered message to topic %s [%d] at offset %v\n",
+						*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+				}
+				break outer
+
+			default:
+				log.Debugf("Ignored event: %s\n", ev)
+			}
+		}
+	}()
+
+
 	firstTick := firstTick()
 	var ticker *time.Ticker = new(time.Ticker)
 
 	run := true
+	processed_msg_count := 0
 
 	for run == true {
 		select {
@@ -139,7 +194,7 @@ func main() {
 					continue
 				}
 				var metric = metricEnvelope.Metric
-				var eventTimeWindow = metric.Timestamp/(1000*int64(windowSize.Seconds()))
+				var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
 
 				for _, aggregationSpecification := range aggregationSpecifications {
 					if metric.Name == aggregationSpecification.FilteredMetricName {
@@ -152,6 +207,7 @@ func main() {
 					}
 				}
 				log.Debug(metricEnvelope)
+				processed_msg_count += 1
 			case kafka.PartitionEOF:
 				//log.Infof("%% Reached %v", e)
 			case kafka.Error:
@@ -161,13 +217,18 @@ func main() {
 
 		case <- firstTick.C:
 			ticker = time.NewTicker(windowSize)
-			publishAggregations()
+			log.Infof("Processed %d messages", processed_msg_count)
+			processed_msg_count = 0
+			publishAggregations(p.ProduceChannel(), &topics[0])
 
 		case <- ticker.C:
-			publishAggregations()
+			log.Infof("Processed %d messages", processed_msg_count)
+			processed_msg_count = 0
+			publishAggregations(p.ProduceChannel(), &topics[0])
 		}
 	}
 
 	log.Info("Stopped monasca-aggregation")
 	c.Close()
+	p.Close()
 }
