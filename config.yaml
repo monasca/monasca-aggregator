@@ -1,10 +1,11 @@
 windowSize: 10
 windowLag: 2
 
-broker: localhost:9092
-group: monasca-aggregation
-consumerTopic: metrics
-producerTopic: metrics
+kafka:
+  broker: localhost:9092
+  group: monasca-aggregation
+  consumerTopic: metrics
+  producerTopic: metrics
 
 aggregationSpecifications:
     - name: Aggregation0

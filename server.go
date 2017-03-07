@@ -92,8 +92,6 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 // TODO: Handle start/stop, fail/restart
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
-// TODO: Cleanup yaml config file
-// TODO: Add Kafka section to yaml config file
 func main() {
 	initLogging()
 
@@ -119,10 +117,10 @@ func main() {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
 
-	broker := viper.GetString("broker")
-	group := viper.GetString("group")
-	consumerTopic := viper.GetString("consumerTopic")
-	producerTopic := viper.GetString("producerTopic")
+	broker := viper.GetString("kafka.broker")
+	group := viper.GetString("kafka.group")
+	consumerTopic := viper.GetString("kafka.consumerTopic")
+	producerTopic := viper.GetString("kafka.producerTopic")
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
