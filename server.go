@@ -121,8 +121,8 @@ func main() {
 
 	broker := viper.GetString("broker")
 	group := viper.GetString("group")
-	readTopic := viper.GetString("readTopic")
-	writeTopic := viper.GetString("writeTopic")
+	consumerTopic := viper.GetString("consumerTopic")
+	producerTopic := viper.GetString("producerTopic")
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -141,7 +141,7 @@ func main() {
 
 	log.Infof("Started monasca-aggregation %v", c)
 
-	err = c.Subscribe(readTopic, nil)
+	err = c.Subscribe(consumerTopic, nil)
 
 	if err != nil {
 		log.Fatalf("Failed to subscribe to topics %c", err)
@@ -229,12 +229,12 @@ func main() {
 			ticker = time.NewTicker(windowSize)
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &writeTopic)
+			publishAggregations(p.ProduceChannel(), &producerTopic)
 
 		case <-ticker.C:
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &writeTopic)
+			publishAggregations(p.ProduceChannel(), &producerTopic)
 		}
 	}
 
