@@ -40,6 +40,22 @@ func initLogging() {
 	log.SetLevel(log.InfoLevel)
 }
 
+func initConfig() {
+	viper.SetDefault("windowSize", 10)
+	viper.SetDefault("windowLag", 2)
+	viper.SetDefault("broker", "localhost:9092")
+	viper.SetDefault("group", "monasca-aggregation")
+	viper.SetDefault("consumerTopic", "metrics")
+	viper.SetDefault("producerTopic", "metrics")
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		log.Fatalf("Fatal error config file: %s \n", err)
+	}
+}
+
 // Return a timer for when the first window should be processed
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
@@ -94,24 +110,11 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
 	initLogging()
-
-	viper.SetDefault("windowSize", 10)
-	viper.SetDefault("windowLag", 2)
-	viper.SetDefault("broker", "localhost:9092")
-	viper.SetDefault("group", "monasca-aggregation")
-	viper.SetDefault("consumerTopic", "metrics")
-	viper.SetDefault("producerTopic", "metrics")
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
-
-	if err != nil {
-		log.Fatalf("Fatal error config file: %s \n", err)
-	}
+	initConfig()
 
 	windowSize = time.Duration(viper.GetInt("WindowSize") * 1e9)
 	windowLag = time.Duration(viper.GetInt("WindowLag") * 1e9)
-	err = viper.UnmarshalKey("aggregationSpecifications", &aggregationSpecifications)
+	err := viper.UnmarshalKey("aggregationSpecifications", &aggregationSpecifications)
 
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
