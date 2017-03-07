@@ -94,7 +94,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 	}
 
 	// TODO: Advance the Kafka offsets
-	// TODO: Delete windowAggregations for the current window Id that was just published
+
 	delete(timeWindowAggregations, activeTimeWindow)
 }
 
