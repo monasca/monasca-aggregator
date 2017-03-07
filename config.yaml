@@ -13,7 +13,12 @@ aggregationSpecifications:
       aggregatedMetricName: aggregated-metric0
     - name: Aggregation1
       filteredMetricName: metric1
+      filteredDimensions:
+          hostname: test-01
       aggregatedMetricName: aggregated-metric1
     - name: Aggregation2
       filteredMetricName: metric2
+      groupedDimensions:
+      - hostname
+      - service
       aggregatedMetricName: aggregated-metric2

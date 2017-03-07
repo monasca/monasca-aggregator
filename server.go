@@ -31,7 +31,7 @@ import (
 var windowSize time.Duration
 var windowLag time.Duration
 var aggregationSpecifications []models.AggregationSpecification
-var timeWindowAggregations = map[int64]map[string]float64{}
+var timeWindowAggregations = map[int64]map[string]models.Metric{}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -77,14 +77,9 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 	log.Infof("activeTimeWindow: %d", activeTimeWindow)
 	log.Info(windowAggregations)
 
-	for name, value := range windowAggregations {
+	for _, value := range windowAggregations {
 		var metricEnvelope = models.MetricEnvelope{
-			models.Metric{
-				name,
-				map[string]string{},
-				float64(int64(time.Now().Unix()) * 1000),
-				value,
-				map[string]string{}},
+			value,
 			map[string]string{},
 			int64(time.Now().Unix() * 1000)}
 
@@ -208,13 +203,43 @@ func main() {
 				var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
 
 				for _, aggregationSpecification := range aggregationSpecifications {
-					if metric.Name == aggregationSpecification.FilteredMetricName {
+					if models.MatchMetric(aggregationSpecification, metric) {
 						var windowAggregations = timeWindowAggregations[eventTimeWindow]
+
 						if windowAggregations == nil {
-							timeWindowAggregations[eventTimeWindow] = make(map[string]float64)
+							timeWindowAggregations[eventTimeWindow] = make(map[string]models.Metric)
 							windowAggregations = timeWindowAggregations[eventTimeWindow]
 						}
-						windowAggregations[aggregationSpecification.AggregatedMetricName] += metric.Value
+
+						var aggregationKey = aggregationSpecification.AggregatedMetricName
+
+						// make the key unique for the supplied groupings
+						if aggregationSpecification.GroupedDimensions != nil {
+							for _, key := range aggregationSpecification.GroupedDimensions {
+								aggregationKey += "," + key + ":" + metric.Dimensions[key]
+							}
+						}
+						log.Infof("Storing key %s", aggregationKey)
+
+						currentMetric := windowAggregations[aggregationKey]
+
+						// create a new metric is one did not exist
+						if currentMetric.Name == "" {
+							currentMetric.Name = aggregationSpecification.AggregatedMetricName
+							currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
+							if currentMetric.Dimensions == nil {
+								currentMetric.Dimensions = map[string]string{}
+							}
+							for _, key := range aggregationSpecification.GroupedDimensions {
+								currentMetric.Dimensions[key] = metric.Dimensions[key]
+							}
+							currentMetric.Value = metric.Value
+							currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
+							windowAggregations[aggregationKey] = currentMetric
+						} else {
+							currentMetric.Value += metric.Value
+							windowAggregations[aggregationKey] = currentMetric
+						}
 					}
 				}
 				log.Debug(metricEnvelope)
