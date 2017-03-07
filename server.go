@@ -54,7 +54,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 	// TODO make timestamp assignment the beginning of the aggregation window
 	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
-	var windowLagCount = int64(windowLag.Seconds()/windowSize.Seconds()) - 1
+	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
 	var activeTimeWindow = currentTimeWindow + windowLagCount
 	var windowAggregations = timeWindowAggregations[activeTimeWindow]
 	log.Infof("currentTimeWindow: %d", currentTimeWindow)
