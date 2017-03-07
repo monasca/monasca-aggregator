@@ -55,20 +55,23 @@ func main() {
 	}()
 
 	for {
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 2; j++ {
 
-		for i := 0; i < 100; i++ {
+				dimensions := map[string]string{"service": strconv.Itoa(i), "hostname": strconv.Itoa(j)}
 
-			var metricEnvelope = models.MetricEnvelope{
-				models.Metric{"metric" + strconv.Itoa(i), map[string]string{}, float64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
-				map[string]string{},
-				int64(time.Now().Unix() * 1000)}
+				var metricEnvelope = models.MetricEnvelope{
+					models.Metric{"metric2", dimensions, float64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
+					map[string]string{},
+					int64(time.Now().Unix() * 1000)}
 
-			value, _ := json.Marshal(metricEnvelope)
+				value, _ := json.Marshal(metricEnvelope)
 
-			p.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
-
-			time.Sleep(100 * time.Microsecond)
+				p.ProduceChannel() <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+			}
 		}
+
+		time.Sleep(time.Second)
 
 		// wait for delivery report goroutine to finish
 		_ = <-doneChan
