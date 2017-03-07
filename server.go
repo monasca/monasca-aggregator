@@ -44,7 +44,7 @@ func initLogging() {
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
 	now := time.Now().Unix()
-	completed := now%int64(windowSize.Seconds()) - int64(windowLag.Seconds())
+	completed := now % int64(windowSize.Seconds()) - int64(windowLag.Seconds())
 	remaining := int64(windowSize.Seconds()) - completed
 	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
 	return firstTick
