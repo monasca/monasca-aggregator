@@ -1,0 +1,17 @@
+broker: localhost:9092
+group: monasca-aggregation
+readTopic: metrics
+writeTopic: metrics
+windowSize: 10
+windowLag: 2
+
+aggregationSpecifications:
+    - name: Aggregation0
+      filteredMetricName: metric0
+      aggregatedMetricName: aggregated-metric0
+    - name: Aggregation1
+      filteredMetricName: metric1
+      aggregatedMetricName: aggregated-metric1
+    - name: Aggregation2
+      filteredMetricName: metric2
+      aggregatedMetricName: aggregated-metric2

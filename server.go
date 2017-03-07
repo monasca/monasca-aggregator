@@ -25,17 +25,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 
 	"github.hpe.com/UNCLE/monasca-aggregation/models"
+	"github.com/spf13/viper"
 )
 
-const windowSize = time.Minute/6 // 10 seconds
-const windowLag = 2*time.Second
-
-var aggregationSpecifications = []models.AggregationSpecification{
-	{"Aggregation0", "metric0", "aggregated-metric0"},
-	{"Aggregation1", "metric1", "aggregated-metric1"},
-	{"Aggregation2", "metric2", "aggregated-metric2"},
-}
-
+var windowSize time.Duration
+var windowLag time.Duration
+var aggregationSpecifications []models.AggregationSpecification
 var timeWindowAggregations = map[int64]map[string]float64{}
 
 func initLogging() {
@@ -49,7 +44,7 @@ func initLogging() {
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
 	now := time.Now().Unix()
-	completed := now % int64(windowSize.Seconds()) - int64(windowLag.Seconds())
+	completed := now%int64(windowSize.Seconds()) - int64(windowLag.Seconds())
 	remaining := int64(windowSize.Seconds()) - completed
 	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
 	return firstTick
@@ -59,7 +54,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 	// TODO make timestamp assignment the beginning of the aggregation window
 	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
-	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
+	var windowLagCount = int64(windowLag.Seconds()/windowSize.Seconds()) - 1
 	var activeTimeWindow = currentTimeWindow + windowLagCount
 	var windowAggregations = timeWindowAggregations[activeTimeWindow]
 	log.Infof("currentTimeWindow: %d", currentTimeWindow)
@@ -87,30 +82,47 @@ func publishAggregations(outbound chan *kafka.Message, topic *string) {
 	delete(timeWindowAggregations, activeTimeWindow)
 }
 
-// TODO: Read in kafka configuration parameters from yaml file
-// TODO: Read in aggregation period and aggregation specifications from yaml file
-// TODO: Publish aggregated metrics to Kafka
-// TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
-// TODO: Potentially, restrict metrics to a previous, current and next time windowed aggregation.
 // TODO: Add support for grouping on dimensions
+// TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
+// TODO: Potentially, filter metrics to some number of previous (based on lag), current and next time windowed aggregation.
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
-// TODO: Add support for different source and destination Kafka topics.
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO: Guarantee at least once publishing of aggregated metrics
 // TODO: Handle start/stop, fail/restart
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
+// TODO: Cleanup yaml config file
+// TODO: Add Kafka section to yaml config file
 func main() {
 	initLogging()
 
-	if len(os.Args) < 4 {
-		log.Errorf("Usage: %s <broker> <group> <topic>", os.Args[0])
+	viper.SetDefault("windowSize", 10)
+	viper.SetDefault("windowLag", 2)
+	viper.SetDefault("broker", "localhost:9092")
+	viper.SetDefault("group", "monasca-aggregation")
+	viper.SetDefault("readTopic", "metrics")
+	viper.SetDefault("writeTopic", "metrics")
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		log.Fatalf("Fatal error config file: %s \n", err)
 	}
 
-	broker := os.Args[1]
-	group := os.Args[2]
-	topic := os.Args[3]
+	windowSize = time.Duration(viper.GetInt("WindowSize") * 1e9)
+	windowLag = time.Duration(viper.GetInt("WindowLag") * 1e9)
+	err = viper.UnmarshalKey("aggregationSpecifications", &aggregationSpecifications)
+
+	if err != nil {
+		log.Fatalf("unable to decode into struct, %v", err)
+	}
+
+	broker := viper.GetString("broker")
+	group := viper.GetString("group")
+	readTopic := viper.GetString("readTopic")
+	writeTopic := viper.GetString("writeTopic")
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -129,12 +141,11 @@ func main() {
 
 	log.Infof("Started monasca-aggregation %v", c)
 
-	err = c.Subscribe(topic, nil)
+	err = c.Subscribe(readTopic, nil)
 
 	if err != nil {
 		log.Fatalf("Failed to subscribe to topics %c", err)
 	}
-
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
 
@@ -164,7 +175,6 @@ func main() {
 			}
 		}
 	}()
-
 
 	firstTick := firstTick()
 	var ticker *time.Ticker = new(time.Ticker)
@@ -209,22 +219,22 @@ func main() {
 				log.Debug(metricEnvelope)
 				processed_msg_count += 1
 			case kafka.PartitionEOF:
-				//log.Infof("%% Reached %v", e)
+			//log.Infof("%% Reached %v", e)
 			case kafka.Error:
 				log.Errorf("%% Error: %v", e)
 				run = false
 			}
 
-		case <- firstTick.C:
+		case <-firstTick.C:
 			ticker = time.NewTicker(windowSize)
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &topic)
+			publishAggregations(p.ProduceChannel(), &writeTopic)
 
-		case <- ticker.C:
+		case <-ticker.C:
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &topic)
+			publishAggregations(p.ProduceChannel(), &writeTopic)
 		}
 	}
 
