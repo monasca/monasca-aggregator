@@ -43,10 +43,10 @@ func initLogging() {
 func initConfig() {
 	viper.SetDefault("windowSize", 10)
 	viper.SetDefault("windowLag", 2)
-	viper.SetDefault("broker", "localhost:9092")
-	viper.SetDefault("group", "monasca-aggregation")
 	viper.SetDefault("consumerTopic", "metrics")
 	viper.SetDefault("producerTopic", "metrics")
+	viper.SetDefault("kafka.bootstrap.servers", "localhost:9092")
+	viper.SetDefault("kafka.group.id", "monasca-aggregation")
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
@@ -114,23 +114,23 @@ func main() {
 
 	windowSize = time.Duration(viper.GetInt("WindowSize") * 1e9)
 	windowLag = time.Duration(viper.GetInt("WindowLag") * 1e9)
+	consumerTopic := viper.GetString("consumerTopic")
+	producerTopic := viper.GetString("producerTopic")
 	err := viper.UnmarshalKey("aggregationSpecifications", &aggregationSpecifications)
 
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
 
-	broker := viper.GetString("kafka.broker")
-	group := viper.GetString("kafka.group")
-	consumerTopic := viper.GetString("kafka.consumerTopic")
-	producerTopic := viper.GetString("kafka.producerTopic")
+	bootstrapServers := viper.GetString("kafka.bootstrap.servers")
+	groupId := viper.GetString("kafka.group.id")
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":               broker,
-		"group.id":                        group,
+		"bootstrap.servers":               bootstrapServers,
+		"group.id":                        groupId,
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
@@ -148,7 +148,7 @@ func main() {
 		log.Fatalf("Failed to subscribe to topics %c", err)
 	}
 
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
 
 	if err != nil {
 		log.Fatalf("Failed to create producer: %s", err)
