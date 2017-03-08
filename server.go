@@ -32,6 +32,7 @@ var windowSize time.Duration
 var windowLag time.Duration
 var aggregationSpecifications []models.AggregationSpecification
 var timeWindowAggregations = map[int64]map[string]models.Metric{}
+var offsetCache = map[int64]map[int32]int64{}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -66,31 +67,70 @@ func firstTick() *time.Timer {
 	return firstTick
 }
 
-func publishAggregations(outbound chan *kafka.Message, topic *string) {
+func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.Consumer) {
 	// TODO make timestamp assignment the beginning of the aggregation window
 	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
 	var activeTimeWindow = currentTimeWindow + windowLagCount
-	var windowAggregations = timeWindowAggregations[activeTimeWindow]
 	log.Infof("currentTimeWindow: %d", currentTimeWindow)
 	log.Infof("activeTimeWindow: %d", activeTimeWindow)
-	log.Info(windowAggregations)
 
-	for _, value := range windowAggregations {
-		var metricEnvelope = models.MetricEnvelope{
-			value,
-			map[string]string{},
-			int64(time.Now().Unix() * 1000)}
+	for t, windowAggregations := range timeWindowAggregations {
+		if t > activeTimeWindow {
+			continue
+		}
+		for _, value := range windowAggregations {
+			var metricEnvelope = models.MetricEnvelope{
+				value,
+				map[string]string{},
+				int64(time.Now().Unix() * 1000)}
 
-		value, _ := json.Marshal(metricEnvelope)
+			value, _ := json.Marshal(metricEnvelope)
 
-		outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+			outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+		}
 	}
 
-	// TODO: Advance the Kafka offsets
-
-	delete(timeWindowAggregations, activeTimeWindow)
+	// TODO: Confirm messages published before committing offsets
+	var offsetList = map[int32]kafka.TopicPartition{}
+	for eventWindow, partitions := range offsetCache {
+		if eventWindow > activeTimeWindow {
+			continue
+		}
+		for partition, offset := range partitions {
+			if int64(offsetList[partition].Offset) <= 0 || offset <= int64(offsetList[partition].Offset) {
+				new_offset, err := kafka.NewOffset(offset + 1)
+				if err != nil {
+					log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, offset)
+				}
+				offsetList[partition] = kafka.TopicPartition{
+					Topic: topic,
+					Partition: partition,
+					Offset: new_offset}
+			}
+		}
+	}
+	if len(offsetList) > 0 {
+		finalOffsets := make([]kafka.TopicPartition, len(offsetList))
+		idx := 0
+		for _, value := range offsetList {
+			finalOffsets[idx] = value
+			idx++
+		}
+		log.Info(finalOffsets)
+		_, err := c.CommitOffsets(finalOffsets)
+		if err != nil {
+			log.Errorf("Consumer errors submitting offsets %v", err)
+		}
+	}
+	for windowTime := range timeWindowAggregations {
+		if windowTime <= activeTimeWindow {
+			log.Infof("Removing time window %d", windowTime)
+			delete(timeWindowAggregations, windowTime)
+			delete(offsetCache, windowTime)
+		}
+	}
 }
 
 // TODO: Add support for grouping on dimensions
@@ -129,11 +169,14 @@ func main() {
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
-		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"}})
+		"enable.auto.commit":		   false,
+		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"},
+	})
 
 	if err != nil {
 		log.Fatalf("Failed to create consumer: %s", err)
 	}
+	defer c.Close()
 
 	log.Infof("Started monasca-aggregation %v", c)
 
@@ -142,12 +185,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to subscribe to topics %c", err)
 	}
+	log.Infof("Subscribed to topic %s as group %s", consumerTopic, groupId)
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
 
 	if err != nil {
 		log.Fatalf("Failed to create producer: %s", err)
 	}
+	defer p.Close()
 
 	log.Infof("Created Producer %v", p)
 
@@ -240,12 +285,26 @@ func main() {
 							currentMetric.Value += metric.Value
 							windowAggregations[aggregationKey] = currentMetric
 						}
+
+						offsetTimeWindow := offsetCache[eventTimeWindow]
+						partition := e.TopicPartition.Partition
+						offset := int64(e.TopicPartition.Offset)
+						if offsetTimeWindow == nil {
+							log.Infof("Initialized offset window %d", eventTimeWindow)
+							offsetCache[eventTimeWindow] = make(map[int32]int64)
+							offsetCache[eventTimeWindow][partition] = offset
+						} else if offsetTimeWindow[partition] <= 0 || offset <= offsetTimeWindow[partition]{
+							log.Infof("Updated offset for partition %d to %d", partition, offset)
+							offsetTimeWindow[partition] = offset
+						}
 					}
 				}
 				log.Debug(metricEnvelope)
 				processed_msg_count += 1
+			case kafka.OffsetsCommitted:
+				log.Infof("Commited offsets ", e)
 			case kafka.PartitionEOF:
-			//log.Infof("%% Reached %v", e)
+				//log.Infof("%% Reached %v", e)
 			case kafka.Error:
 				log.Errorf("%% Error: %v", e)
 				run = false
@@ -255,16 +314,14 @@ func main() {
 			ticker = time.NewTicker(windowSize)
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &producerTopic)
+			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 
 		case <-ticker.C:
 			log.Infof("Processed %d messages", processed_msg_count)
 			processed_msg_count = 0
-			publishAggregations(p.ProduceChannel(), &producerTopic)
+			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 		}
 	}
 
 	log.Info("Stopped monasca-aggregation")
-	c.Close()
-	p.Close()
 }
