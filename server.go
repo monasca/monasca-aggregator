@@ -33,7 +33,7 @@ import (
 
 var windowSize time.Duration
 var windowLag time.Duration
-var aggregationSpecifications []models.AggregationSpecification
+//var aggregationSpecifications []models.AggregationSpecification
 var timeWindowAggregations = map[int64]map[string]models.Metric{}
 var offsetCache = map[int64]map[int32]int64{}
 var inCounter = prometheus.NewCounter(
@@ -44,6 +44,9 @@ var outCounter = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Name: "out_messages",
 		Help: "Number of messages written"})
+
+var config = initConfig()
+var aggregationSpecifications = initAggregationSpecs()
 
 func init() {
 	prometheus.MustRegister(inCounter)
@@ -57,21 +60,34 @@ func initLogging() {
 	log.SetLevel(log.InfoLevel)
 }
 
-func initConfig() {
-	viper.SetDefault("windowSize", 10)
-	viper.SetDefault("windowLag", 2)
-	viper.SetDefault("consumerTopic", "metrics")
-	viper.SetDefault("producerTopic", "metrics")
-	viper.SetDefault("kafka.bootstrap.servers", "localhost:9092")
-	viper.SetDefault("kafka.group.id", "monasca-aggregation")
-	viper.SetDefault("prometheus.endpoint", "localhost:8080")
-	viper.SetConfigName("config")
-	viper.AddConfigPath(".")
-	err := viper.ReadInConfig()
+func initConfig() *viper.Viper {
+	config := viper.New()
+	config.SetDefault("windowSize", 10)
+	config.SetDefault("windowLag", 2)
+	config.SetDefault("consumerTopic", "metrics")
+	config.SetDefault("producerTopic", "metrics")
+	config.SetDefault("kafka.bootstrap.servers", "localhost:9092")
+	config.SetDefault("kafka.group.id", "monasca-aggregation")
+	config.SetDefault("prometheus.endpoint", "localhost:8080")
+	config.SetConfigName("config")
+	config.AddConfigPath(".")
+	err := config.ReadInConfig()
 
 	if err != nil {
-		log.Fatalf("Fatal error config file: %s \n", err)
+		log.Fatalf("Fatal error reading config file: %s", err)
 	}
+	return config
+}
+
+func initAggregationSpecs() *viper.Viper {
+	config := viper.New()
+	config.SetConfigName("aggregations")
+	config.AddConfigPath(".")
+	err := config.ReadInConfig()
+	if err != nil {
+		log.Fatalf("Fatal error reading aggregations: %s", err)
+	}
+	return config
 }
 
 func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consumer {
@@ -234,20 +250,22 @@ func main() {
 	initLogging()
 	initConfig()
 
-	windowSize = time.Duration(viper.GetInt("WindowSize") * 1e9)
-	windowLag = time.Duration(viper.GetInt("WindowLag") * 1e9)
-	consumerTopic := viper.GetString("consumerTopic")
-	producerTopic := viper.GetString("producerTopic")
-	err := viper.UnmarshalKey("aggregationSpecifications", &aggregationSpecifications)
+	windowSize = time.Duration(config.GetInt("WindowSize") * 1e9)
+	windowLag = time.Duration(config.GetInt("WindowLag") * 1e9)
+	consumerTopic := config.GetString("consumerTopic")
+	producerTopic := config.GetString("producerTopic")
+
+	aggregations := []models.AggregationSpecification{}
+	err := aggregationSpecifications.UnmarshalKey("aggregationSpecifications", &aggregations)
 
 	if err != nil {
 		log.Fatalf("unable to decode into struct, %v", err)
 	}
 
-	bootstrapServers := viper.GetString("kafka.bootstrap.servers")
-	groupId := viper.GetString("kafka.group.id")
+	bootstrapServers := config.GetString("kafka.bootstrap.servers")
+	groupId := config.GetString("kafka.group.id")
 
-	promAddr := viper.GetString("prometheus.endpoint")
+	promAddr := config.GetString("prometheus.endpoint")
 
 
 	sigchan := make(chan os.Signal)
@@ -295,7 +313,7 @@ func main() {
 				var metric = metricEnvelope.Metric
 				var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
 
-				for _, aggregationSpecification := range aggregationSpecifications {
+				for _, aggregationSpecification := range aggregations {
 					if models.MatchMetric(aggregationSpecification, metric) {
 						var windowAggregations = timeWindowAggregations[eventTimeWindow]
 
