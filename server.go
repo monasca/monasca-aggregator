@@ -57,6 +57,65 @@ func initConfig() {
 	}
 }
 
+func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consumer {
+	c, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers":               bootstrapServers,
+		"group.id":                        groupId,
+		"session.timeout.ms":              6000,
+		"go.events.channel.enable":        true,
+		"go.application.rebalance.enable": true,
+		"enable.auto.commit":		   false,
+		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"},
+	})
+
+	if err != nil {
+		log.Fatalf("Failed to create consumer: %s", err)
+	}
+
+	log.Infof("Started monasca-aggregation %v", c)
+
+	err = c.Subscribe(consumerTopic, nil)
+
+	if err != nil {
+		log.Fatalf("Failed to subscribe to topics %c", err)
+	}
+	log.Infof("Subscribed to topic %s as group %s", consumerTopic, groupId)
+
+	return c
+}
+
+func initProducer(bootstrapServers string) *kafka.Producer {
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
+
+	if err != nil {
+		log.Fatalf("Failed to create producer: %s", err)
+	}
+
+	log.Infof("Created Producer %v", p)
+
+	return p
+}
+
+func handleProducerEvents(p *kafka.Producer) {
+	outer:
+	for e := range p.Events() {
+		switch ev := e.(type) {
+		case *kafka.Message:
+			m := ev
+			if m.TopicPartition.Error != nil {
+				log.Errorf("Delivery failed: %v\n", m.TopicPartition.Error)
+			} else {
+				log.Infof("Delivered message to topic %s [%d] at offset %v\n",
+					*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+			}
+			break outer
+
+		default:
+			log.Debugf("Ignored event: %s\n", ev)
+		}
+	}
+}
+
 // Return a timer for when the first window should be processed
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
@@ -170,63 +229,19 @@ func main() {
 	bootstrapServers := viper.GetString("kafka.bootstrap.servers")
 	groupId := viper.GetString("kafka.group.id")
 
+
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
-	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":               bootstrapServers,
-		"group.id":                        groupId,
-		"session.timeout.ms":              6000,
-		"go.events.channel.enable":        true,
-		"go.application.rebalance.enable": true,
-		"enable.auto.commit":		   false,
-		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"},
-	})
-
-	if err != nil {
-		log.Fatalf("Failed to create consumer: %s", err)
-	}
+	c := initConsumer(consumerTopic, groupId, bootstrapServers)
 	defer c.Close()
 
-	log.Infof("Started monasca-aggregation %v", c)
-
-	err = c.Subscribe(consumerTopic, nil)
-
-	if err != nil {
-		log.Fatalf("Failed to subscribe to topics %c", err)
-	}
-	log.Infof("Subscribed to topic %s as group %s", consumerTopic, groupId)
-
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
-
-	if err != nil {
-		log.Fatalf("Failed to create producer: %s", err)
-	}
+	p := initProducer(bootstrapServers)
 	defer p.Close()
 
-	log.Infof("Created Producer %v", p)
+	go handleProducerEvents(p)
 
-	// Set up producer events handling
-	go func() {
-	outer:
-		for e := range p.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				m := ev
-				if m.TopicPartition.Error != nil {
-					log.Errorf("Delivery failed: %v\n", m.TopicPartition.Error)
-				} else {
-					log.Infof("Delivered message to topic %s [%d] at offset %v\n",
-						*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
-				}
-				break outer
-
-			default:
-				log.Debugf("Ignored event: %s\n", ev)
-			}
-		}
-	}()
-
+	// align to time boundaries?
 	firstTick := firstTick()
 	var ticker *time.Ticker = new(time.Ticker)
 
