@@ -75,6 +75,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	var activeTimeWindow = currentTimeWindow + windowLagCount
 	log.Infof("currentTimeWindow: %d", currentTimeWindow)
 	log.Infof("activeTimeWindow: %d", activeTimeWindow)
+	log.Info(timeWindowAggregations)
 
 	for t, windowAggregations := range timeWindowAggregations {
 		if t > activeTimeWindow {
@@ -93,6 +94,12 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	}
 
 	// TODO: Confirm messages published before committing offsets
+	offsetList, activeTimeWindow := getMinOffsets(activeTimeWindow, topic)
+	commitOffsets(offsetList, c)
+	deleteInactiveTimeWindows(activeTimeWindow)
+}
+// Get the min offsets in Kafka for each time window.
+func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.TopicPartition, int64) {
 	var offsetList = map[int32]kafka.TopicPartition{}
 	for eventWindow, partitions := range offsetCache {
 		if eventWindow > activeTimeWindow {
@@ -105,12 +112,16 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 					log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, offset)
 				}
 				offsetList[partition] = kafka.TopicPartition{
-					Topic: topic,
+					Topic:     topic,
 					Partition: partition,
-					Offset: new_offset}
+					Offset:    new_offset}
 			}
 		}
 	}
+	return offsetList, activeTimeWindow
+}
+// Commit the Kafka offsets.
+func commitOffsets(offsetList map[int32]kafka.TopicPartition, c *kafka.Consumer) {
 	if len(offsetList) > 0 {
 		finalOffsets := make([]kafka.TopicPartition, len(offsetList))
 		idx := 0
@@ -124,23 +135,22 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 			log.Errorf("Consumer errors submitting offsets %v", err)
 		}
 	}
-	for windowTime := range timeWindowAggregations {
-		if windowTime <= activeTimeWindow {
-			log.Infof("Removing time window %d", windowTime)
-			delete(timeWindowAggregations, windowTime)
-			delete(offsetCache, windowTime)
+}
+// Delete time window aggregations for inactive time windows.
+func deleteInactiveTimeWindows(activeTimeWindow int64) {
+	for timeWindow := range timeWindowAggregations {
+		if timeWindow <= activeTimeWindow {
+			log.Debugf("Delete time window %d", timeWindow)
+			delete(timeWindowAggregations, timeWindow)
+			delete(offsetCache, timeWindow)
 		}
 	}
 }
 
-// TODO: Add support for grouping on dimensions
-// TODO: Manually update Kafka offsets such that if a crash occurs, processing re-starts at the correct offset
-// TODO: Potentially, filter metrics to some number of previous (based on lag), current and next time windowed aggregation.
 // TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO: Guarantee at least once publishing of aggregated metrics
-// TODO: Handle start/stop, fail/restart
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
@@ -264,7 +274,7 @@ func main() {
 								aggregationKey += "," + key + ":" + metric.Dimensions[key]
 							}
 						}
-						log.Infof("Storing key %s", aggregationKey)
+						log.Debugf("Storing key %s", aggregationKey)
 
 						currentMetric := windowAggregations[aggregationKey]
 
