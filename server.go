@@ -29,6 +29,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.hpe.com/UNCLE/monasca-aggregation/utils"
 )
 
 var windowSize time.Duration
@@ -314,7 +315,7 @@ func main() {
 				var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
 
 				for _, aggregationSpecification := range aggregations {
-					if models.MatchMetric(aggregationSpecification, metric) {
+					if utils.MatchMetric(aggregationSpecification, metric) {
 						var windowAggregations = timeWindowAggregations[eventTimeWindow]
 
 						if windowAggregations == nil {
