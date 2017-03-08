@@ -34,7 +34,6 @@ import (
 
 var windowSize time.Duration
 var windowLag time.Duration
-//var aggregationSpecifications []models.AggregationSpecification
 var timeWindowAggregations = map[int64]map[string]models.Metric{}
 var offsetCache = map[int64]map[int32]int64{}
 var inCounter = prometheus.NewCounter(
@@ -241,7 +240,6 @@ func deleteInactiveTimeWindows(activeTimeWindow int64) {
 	}
 }
 
-// TODO: Add Prometheus Client library and report metrics
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO: Guarantee at least once publishing of aggregated metrics
