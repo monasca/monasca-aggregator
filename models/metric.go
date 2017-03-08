@@ -15,7 +15,7 @@
 package models
 
 import (
-	"github.com/prometheus/common/log"
+	log "github.com/Sirupsen/logrus"
 )
 
 type Metric struct {
