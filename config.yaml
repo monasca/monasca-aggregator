@@ -7,6 +7,9 @@ kafka:
   bootstrap.servers: localhost:9092
   group.id: monasca-aggregation
 
+prometheus:
+  endpoint: localhost:8080
+
 aggregationSpecifications:
     - name: Aggregation0
       filteredMetricName: metric0

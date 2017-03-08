@@ -26,6 +26,9 @@ import (
 
 	"github.hpe.com/UNCLE/monasca-aggregation/models"
 	"github.com/spf13/viper"
+	"github.com/prometheus/client_golang/prometheus"
+	"net/http"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var windowSize time.Duration
@@ -33,6 +36,19 @@ var windowLag time.Duration
 var aggregationSpecifications []models.AggregationSpecification
 var timeWindowAggregations = map[int64]map[string]models.Metric{}
 var offsetCache = map[int64]map[int32]int64{}
+var inCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "in_messages",
+		Help: "Number of messages read"})
+var outCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "out_messages",
+		Help: "Number of messages written"})
+
+func init() {
+	prometheus.MustRegister(inCounter)
+	prometheus.MustRegister(outCounter)
+}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -48,6 +64,7 @@ func initConfig() {
 	viper.SetDefault("producerTopic", "metrics")
 	viper.SetDefault("kafka.bootstrap.servers", "localhost:9092")
 	viper.SetDefault("kafka.group.id", "monasca-aggregation")
+	viper.SetDefault("prometheus.endpoint", "localhost:8080")
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	err := viper.ReadInConfig()
@@ -97,7 +114,6 @@ func initProducer(bootstrapServers string) *kafka.Producer {
 }
 
 func handleProducerEvents(p *kafka.Producer) {
-	outer:
 	for e := range p.Events() {
 		switch ev := e.(type) {
 		case *kafka.Message:
@@ -108,7 +124,6 @@ func handleProducerEvents(p *kafka.Producer) {
 				log.Infof("Delivered message to topic %s [%d] at offset %v\n",
 					*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
 			}
-			break outer
 
 		default:
 			log.Debugf("Ignored event: %s\n", ev)
@@ -132,9 +147,11 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
 	var activeTimeWindow = currentTimeWindow + windowLagCount
-	log.Infof("currentTimeWindow: %d", currentTimeWindow)
-	log.Infof("activeTimeWindow: %d", activeTimeWindow)
-	log.Info(timeWindowAggregations)
+	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
+	log.Debugf("activeTimeWindow: %d", activeTimeWindow)
+	log.Debug(timeWindowAggregations)
+
+	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
 	for t, windowAggregations := range timeWindowAggregations {
 		if t > activeTimeWindow {
@@ -149,6 +166,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 			value, _ := json.Marshal(metricEnvelope)
 
 			outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+			outCounter.Inc()
 		}
 	}
 
@@ -188,7 +206,7 @@ func commitOffsets(offsetList map[int32]kafka.TopicPartition, c *kafka.Consumer)
 			finalOffsets[idx] = value
 			idx++
 		}
-		log.Info(finalOffsets)
+		log.Debug(finalOffsets)
 		_, err := c.CommitOffsets(finalOffsets)
 		if err != nil {
 			log.Errorf("Consumer errors submitting offsets %v", err)
@@ -229,6 +247,8 @@ func main() {
 	bootstrapServers := viper.GetString("kafka.bootstrap.servers")
 	groupId := viper.GetString("kafka.group.id")
 
+	promAddr := viper.GetString("prometheus.endpoint")
+
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -245,14 +265,17 @@ func main() {
 	firstTick := firstTick()
 	var ticker *time.Ticker = new(time.Ticker)
 
-	run := true
-	processed_msg_count := 0
+	go func() {
+		// Start prometheus endpoint
+		http.Handle("/metrics", promhttp.Handler())
+		log.Fatal(http.ListenAndServe(promAddr, nil))
+	}()
+	log.Infof("Serving metrics on %s/metrics", promAddr)
 
-	for run == true {
+	for true {
 		select {
 		case sig := <-sigchan:
-			log.Infof("Caught signal %v: terminating", sig)
-			run = false
+			log.Fatalf("Caught signal %v: terminating", sig)
 
 		case ev := <-c.Events():
 			switch e := ev.(type) {
@@ -315,35 +338,30 @@ func main() {
 						partition := e.TopicPartition.Partition
 						offset := int64(e.TopicPartition.Offset)
 						if offsetTimeWindow == nil {
-							log.Infof("Initialized offset window %d", eventTimeWindow)
+							log.Debugf("Initialized offset window %d", eventTimeWindow)
 							offsetCache[eventTimeWindow] = make(map[int32]int64)
 							offsetCache[eventTimeWindow][partition] = offset
 						} else if offsetTimeWindow[partition] <= 0 || offset <= offsetTimeWindow[partition]{
-							log.Infof("Updated offset for partition %d to %d", partition, offset)
+							log.Debugf("Updated offset for partition %d to %d", partition, offset)
 							offsetTimeWindow[partition] = offset
 						}
 					}
 				}
 				log.Debug(metricEnvelope)
-				processed_msg_count += 1
+				inCounter.Inc()
 			case kafka.OffsetsCommitted:
 				log.Infof("Commited offsets ", e)
 			case kafka.PartitionEOF:
 				//log.Infof("%% Reached %v", e)
 			case kafka.Error:
-				log.Errorf("%% Error: %v", e)
-				run = false
+				log.Fatalf("%% Error: %v", e)
 			}
 
 		case <-firstTick.C:
 			ticker = time.NewTicker(windowSize)
-			log.Infof("Processed %d messages", processed_msg_count)
-			processed_msg_count = 0
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 
 		case <-ticker.C:
-			log.Infof("Processed %d messages", processed_msg_count)
-			processed_msg_count = 0
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 		}
 	}
