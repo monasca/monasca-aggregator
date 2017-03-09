@@ -44,6 +44,6 @@ A high-speed aggregation micro-service for Monasca with the following features:
 
 * Written in Go.
 
-* Instrumented using the [Prometheus Go Client Library](https://github.com/prometheus/client_golang) and [https://github.com/sirupsen/logrus](https://github.com/sirupsen/logrus).
+* Instrumented using the [Prometheus Go Client Library](https://github.com/prometheus/client_golang) and [logrus](https://github.com/sirupsen/logrus).
 
 * Configured using [Viper](https://github.com/spf13/viper). Viper supports many configuration options, but we use it for yaml config files.
