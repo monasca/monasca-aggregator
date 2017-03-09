@@ -322,7 +322,6 @@ func processMessage(e *kafka.Message) {
 
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
-// TODO: Guarantee at least once publishing of aggregated metrics
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
@@ -337,8 +336,7 @@ func main() {
 	bootstrapServers := config.GetString("kafka.bootstrap.servers")
 	groupId := config.GetString("kafka.group.id")
 
-	promAddr := config.GetString("prometheus.endpoint")
-
+	prometheusEndpoint := config.GetString("prometheus.endpoint")
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -360,9 +358,9 @@ func main() {
 	go func() {
 		// Start prometheus endpoint
 		http.Handle("/metrics", promhttp.Handler())
-		log.Fatal(http.ListenAndServe(promAddr, nil))
+		log.Fatal(http.ListenAndServe(prometheusEndpoint, nil))
 	}()
-	log.Infof("Serving metrics on %s/metrics", promAddr)
+	log.Infof("Serving metrics on %s/metrics", prometheusEndpoint)
 
 	for true {
 		select {
