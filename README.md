@@ -32,7 +32,7 @@ A high-speed aggregation micro-service for Monasca with the following features:
 
 * Stop/start, crash/restarts handling. Kafka offsets are manually committed after an aggregation is produced to allow processing to start from where the last successful aggregation ended. Therefore, aggregations are computed with no data loss.
 
-* DSL. A nice DSL for describing aggregations in a aggregations.yaml. See, [aggregations.yaml](https://github.hpe.com/UNCLE/monasca-aggregation/blob/master/aggregations.yaml).
+* DSL. A nice DSL for describing aggregations in a aggregations.yaml. See, [aggregations.yaml](aggregations.yaml).
 
 * Performance. > 50K metrics/sec, but we're not exactly sure how fast it is. It is possible it is greater than 100K metrics/sec, but we'll need a different testing strategy to verify.
 
@@ -46,4 +46,4 @@ A high-speed aggregation micro-service for Monasca with the following features:
 
 * Instrumented using the [Prometheus Go Client Library](https://github.com/prometheus/client_golang) and [logrus](https://github.com/sirupsen/logrus).
 
-* Configured using [Viper](https://github.com/spf13/viper). Viper supports many configuration options, but we use it for yaml config files.
+* Configured using [Viper](https://github.com/spf13/viper). Viper supports many configuration options, but we use it for yaml config files. See [config.yaml](config.yaml)
