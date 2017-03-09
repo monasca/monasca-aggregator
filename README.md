@@ -12,9 +12,9 @@ A high-speed near real-time continuous aggregation micro-service for Monasca wit
 
 * Filter metrics by dimension (name, value) pairs.
 
-* Group metrics by dimension names.
+* Group by metric dimension names.
 
-* Write aggregated metrics with a specified aggregated name.
+* Write aggregated metrics using a specified aggregated name.
 
 * Supported aggregations include the following:
  
@@ -26,29 +26,30 @@ A high-speed near real-time continuous aggregation micro-service for Monasca wit
 
 * Aggregations aligned to time window boundaries.
 Time window aggregations occur at boundaries aligned to the start of the epoch.
-E.g. if a one hour aggregation window size is specified aggregations will start on the hour, not randomly in the middle.
+E.g. If a one hour window size is specified, time window aggregations will start on the hour, not randomly in the middle based on when started.
 
-* Lag time. Produce aggregations at a specified lag time past the end of the time window.
-The time at which the aggregations start is set based on a "lag" time, which is the duration past the end of the time window.
-For example, 10 minutes past the hour. This can be set to any value, such as 10 hours if desired.
+* Lag time. Aggregations are produced at a specified lag time past the end of the time window.
+The time at which the aggregations start is specified based on a "lag" time, which is the duration past the end of the time window.
+E.g. 10 minutes past the hour. This can be set to any value, such as 10 hours if desired.
 
 * Continuous near real-time aggregations.
-Aggregations are stored in memory, not metrics.
-Therefore the metrics don't need to be pulled into memory and operated on in a batch.
+Aggregations are stored in memory only.
+Therefore the metrics don't need to be pulled into memory and operated on in a batch operation.
 E.g. When perfoming a sum for a series only the running total is kept in memory for each series.
 
 * Event time window processing.
-Aggregations for metrics are processed based on the timestamp of the metric in event time, and not the process time or time at which it is being processed.
+Aggregations for metrics are processed based on the timestamp of the metric in event time, and not the process time or time at which the metric is being processed.
 
 * Stop/start, crash/restarts handling.
 Kafka offsets are manually committed after an aggregation is produced to allow processing to start off from where the last successful aggregation ended.
 Therefore, aggregations are computed with no data loss.
-If for any reason the processing stops in the middle of a time window the Kafka offsets will not have been committed for that time window.
-At start-up the Kafka offsets are read from Kafka and processing starts off from the last succesful commit.
+If for any reason  processing stops in the middle of a time window the Kafka offsets will not be committed for that time window.
+When re-started, the Kafka offsets are read from Kafka and processing starts off from the last succesful commit.
+This implies that metrics may be read from Kafka multiple times, but there is no data loss.
 
 * Domain Specific Language (DSL).
 A simple expressive DSL for specifying aggregations.
-See, [aggregations.yaml](aggregations.yaml).
+See, [aggregation-specifications.yaml](aggregation-specifications.yaml).
 
 * Performance. > 50K metrics/sec, but we're not exactly sure how fast it is.
 It is possible it is greater than 100K metrics/sec, but we'll need a different testing strategy to verify.
@@ -66,7 +67,8 @@ It is possible it is greater than 100K metrics/sec, but we'll need a different t
   * [Viper](https://github.com/spf13/viper)
 
 * No additional runtime requirements, beyond Apache Kafka, such as Apache Spark and Apache Storm.
-In addition, no additional databases required. For example, Kafka offsets are stored in Kafka and do not require an external database, such as MySQL.
+In addition, no additional databases required.
+For example, Kafka offsets are stored in Kafka and do not require an external database, such as MySQL.
 
 * Instantaneous start-up times.
 Due to it's lightweight design and use of Go, start-up times are extremely fast.
@@ -86,4 +88,4 @@ In addition, due to Go and the small set of dependencies, it is possible to run 
 
 * Configured using [Viper](https://github.com/spf13/viper).
 Viper supports many configuration options, but we use it for yaml config files.
-See [config.yaml](config.yaml) and [aggregations.yaml](aggregations.yaml)
+See [config.yaml](config.yaml) and [aggregation-specifications.yaml](aggregation-specifications.yaml)

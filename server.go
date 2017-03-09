@@ -81,7 +81,7 @@ func initConfig() *viper.Viper {
 
 func initAggregationSpecs() *viper.Viper {
 	config := viper.New()
-	config.SetConfigName("aggregations")
+	config.SetConfigName("aggregation-specifications")
 	config.AddConfigPath(".")
 	err := config.ReadInConfig()
 	if err != nil {
