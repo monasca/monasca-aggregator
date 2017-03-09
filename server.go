@@ -294,6 +294,13 @@ func main() {
 		case sig := <-sigchan:
 			log.Fatalf("Caught signal %v: terminating", sig)
 
+		case <-firstTick.C:
+			ticker = time.NewTicker(windowSize)
+			publishAggregations(p.ProduceChannel(), &producerTopic, c)
+
+		case <-ticker.C:
+			publishAggregations(p.ProduceChannel(), &producerTopic, c)
+
 		case ev := <-c.Events():
 			switch e := ev.(type) {
 			case kafka.AssignedPartitions:
@@ -373,13 +380,6 @@ func main() {
 			case kafka.Error:
 				log.Fatalf("%% Error: %v", e)
 			}
-
-		case <-firstTick.C:
-			ticker = time.NewTicker(windowSize)
-			publishAggregations(p.ProduceChannel(), &producerTopic, c)
-
-		case <-ticker.C:
-			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 		}
 	}
 
