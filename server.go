@@ -35,7 +35,10 @@ import (
 var windowSize time.Duration
 var windowLag time.Duration
 var timeWindowAggregations = map[int64]map[string]models.Metric{}
+// map[timewindow][partition]offset
 var offsetCache = map[int64]map[int32]int64{}
+
+//init global references to counters
 var inCounter = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Name: "in_messages",
@@ -206,6 +209,7 @@ func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.Topic
 		}
 		for partition, offset := range partitions {
 			if int64(offsetList[partition].Offset) <= 0 || offset <= int64(offsetList[partition].Offset) {
+				// kafka expects the offset of the next message to read, so add one
 				new_offset, err := kafka.NewOffset(offset + 1)
 				if err != nil {
 					log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, offset)
@@ -246,7 +250,7 @@ func deleteInactiveTimeWindows(activeTimeWindow int64) {
 	}
 }
 
-func processMessage(e kafka.Message) {
+func processMessage(e *kafka.Message) {
 	metricEnvelope := models.MetricEnvelope{}
 	err := json.Unmarshal([]byte(e.Value), &metricEnvelope)
 	if err != nil {
