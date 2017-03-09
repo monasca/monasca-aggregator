@@ -86,4 +86,4 @@ In addition, due to Go and the small set of dependencies, it is possible to run 
 
 * Configured using [Viper](https://github.com/spf13/viper).
 Viper supports many configuration options, but we use it for yaml config files.
-See [config.yaml](config.yaml)
+See [config.yaml](config.yaml) and [aggregations.yaml](aggregations.yaml)
