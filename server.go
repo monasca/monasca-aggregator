@@ -46,7 +46,7 @@ var outCounter = prometheus.NewCounter(
 		Help: "Number of messages written"})
 
 var config = initConfig()
-var aggregationSpecifications = initAggregationSpecs()
+var aggregations = initAggregationSpecs()
 
 func init() {
 	prometheus.MustRegister(inCounter)
@@ -79,7 +79,7 @@ func initConfig() *viper.Viper {
 	return config
 }
 
-func initAggregationSpecs() *viper.Viper {
+func initAggregationSpecs() []models.AggregationSpecification {
 	config := viper.New()
 	config.SetConfigName("aggregation-specifications")
 	config.AddConfigPath(".")
@@ -87,7 +87,13 @@ func initAggregationSpecs() *viper.Viper {
 	if err != nil {
 		log.Fatalf("Fatal error reading aggregations: %s", err)
 	}
-	return config
+	var aggregations []models.AggregationSpecification
+	err = config.UnmarshalKey("aggregationSpecifications", &aggregations)
+	if err != nil {
+		log.Fatalf("Failed to parse aggregations: %s", err)
+	}
+
+	return aggregations
 }
 
 func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consumer {
@@ -105,7 +111,7 @@ func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consum
 		log.Fatalf("Failed to create consumer: %s", err)
 	}
 
-	log.Infof("Started monasca-aggregation %v", c)
+	log.Infof("Created kafka consumer %v", c)
 
 	err = c.Subscribe(consumerTopic, nil)
 
@@ -240,6 +246,76 @@ func deleteInactiveTimeWindows(activeTimeWindow int64) {
 	}
 }
 
+func processMessage(e kafka.Message) {
+	metricEnvelope := models.MetricEnvelope{}
+	err := json.Unmarshal([]byte(e.Value), &metricEnvelope)
+	if err != nil {
+		log.Warnf("%% Invalid metric envelope on %s:%s", e.TopicPartition, string(e.Value))
+		return
+	}
+	var metric = metricEnvelope.Metric
+
+	var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
+
+	for _, aggregationSpecification := range aggregations {
+		if !utils.MatchMetric(aggregationSpecification, metric) {
+			continue
+		}
+
+		var windowAggregations = timeWindowAggregations[eventTimeWindow]
+		if windowAggregations == nil {
+			timeWindowAggregations[eventTimeWindow] = make(map[string]models.Metric)
+			windowAggregations = timeWindowAggregations[eventTimeWindow]
+		}
+
+		var aggregationKey = aggregationSpecification.AggregatedMetricName
+
+		// make the key unique for the supplied groupings
+		if aggregationSpecification.GroupedDimensions != nil {
+			for _, key := range aggregationSpecification.GroupedDimensions {
+				aggregationKey += "," + key + ":" + metric.Dimensions[key]
+			}
+		}
+		log.Debugf("Storing key %s", aggregationKey)
+
+		currentMetric := windowAggregations[aggregationKey]
+
+		// create a new metric if one did not exist
+		if currentMetric.Name == "" {
+			currentMetric.Name = aggregationSpecification.AggregatedMetricName
+			currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
+			if currentMetric.Dimensions == nil {
+				currentMetric.Dimensions = map[string]string{}
+			}
+			for _, key := range aggregationSpecification.GroupedDimensions {
+				currentMetric.Dimensions[key] = metric.Dimensions[key]
+			}
+			currentMetric.Value = metric.Value
+			currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
+			windowAggregations[aggregationKey] = currentMetric
+		} else {
+			currentMetric.Value += metric.Value
+			windowAggregations[aggregationKey] = currentMetric
+		}
+
+		// update offsets for time window
+		offsetTimeWindow := offsetCache[eventTimeWindow]
+		partition := e.TopicPartition.Partition
+		offset := int64(e.TopicPartition.Offset)
+		if offsetTimeWindow == nil {
+			log.Debugf("Initialized offset window %d", eventTimeWindow)
+			offsetCache[eventTimeWindow] = make(map[int32]int64)
+			offsetCache[eventTimeWindow][partition] = offset
+		} else if offsetTimeWindow[partition] <= 0 || offset <= offsetTimeWindow[partition]{
+			log.Debugf("Updated offset for partition %d to %d", partition, offset)
+			offsetTimeWindow[partition] = offset
+		}
+	}
+
+	log.Debug(metricEnvelope)
+	inCounter.Inc()
+}
+
 // TODO: Create Helm Charts
 // TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO: Guarantee at least once publishing of aggregated metrics
@@ -253,13 +329,6 @@ func main() {
 	windowLag = time.Duration(config.GetInt("WindowLag") * 1e9)
 	consumerTopic := config.GetString("consumerTopic")
 	producerTopic := config.GetString("producerTopic")
-
-	aggregations := []models.AggregationSpecification{}
-	err := aggregationSpecifications.UnmarshalKey("aggregationSpecifications", &aggregations)
-
-	if err != nil {
-		log.Fatalf("unable to decode into struct, %v", err)
-	}
 
 	bootstrapServers := config.GetString("kafka.bootstrap.servers")
 	groupId := config.GetString("kafka.group.id")
@@ -277,6 +346,8 @@ func main() {
 	defer p.Close()
 
 	go handleProducerEvents(p)
+
+	log.Info("Started monasca-aggregation")
 
 	// align to time boundaries?
 	firstTick := firstTick()
@@ -306,77 +377,20 @@ func main() {
 			case kafka.AssignedPartitions:
 				log.Infof("%% %v", e)
 				c.Assign(e.Partitions)
+
 			case kafka.RevokedPartitions:
 				log.Infof("%% %v", e)
 				c.Unassign()
+
 			case *kafka.Message:
-				metricEnvelope := models.MetricEnvelope{}
-				err = json.Unmarshal([]byte(e.Value), &metricEnvelope)
-				if err != nil {
-					log.Warnf("%% Invalid metric envelope on %s:%s", e.TopicPartition, string(e.Value))
-					continue
-				}
-				var metric = metricEnvelope.Metric
-				var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
+				processMessage(e)
 
-				for _, aggregationSpecification := range aggregations {
-					if utils.MatchMetric(aggregationSpecification, metric) {
-						var windowAggregations = timeWindowAggregations[eventTimeWindow]
-
-						if windowAggregations == nil {
-							timeWindowAggregations[eventTimeWindow] = make(map[string]models.Metric)
-							windowAggregations = timeWindowAggregations[eventTimeWindow]
-						}
-
-						var aggregationKey = aggregationSpecification.AggregatedMetricName
-
-						// make the key unique for the supplied groupings
-						if aggregationSpecification.GroupedDimensions != nil {
-							for _, key := range aggregationSpecification.GroupedDimensions {
-								aggregationKey += "," + key + ":" + metric.Dimensions[key]
-							}
-						}
-						log.Debugf("Storing key %s", aggregationKey)
-
-						currentMetric := windowAggregations[aggregationKey]
-
-						// create a new metric is one did not exist
-						if currentMetric.Name == "" {
-							currentMetric.Name = aggregationSpecification.AggregatedMetricName
-							currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
-							if currentMetric.Dimensions == nil {
-								currentMetric.Dimensions = map[string]string{}
-							}
-							for _, key := range aggregationSpecification.GroupedDimensions {
-								currentMetric.Dimensions[key] = metric.Dimensions[key]
-							}
-							currentMetric.Value = metric.Value
-							currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
-							windowAggregations[aggregationKey] = currentMetric
-						} else {
-							currentMetric.Value += metric.Value
-							windowAggregations[aggregationKey] = currentMetric
-						}
-
-						offsetTimeWindow := offsetCache[eventTimeWindow]
-						partition := e.TopicPartition.Partition
-						offset := int64(e.TopicPartition.Offset)
-						if offsetTimeWindow == nil {
-							log.Debugf("Initialized offset window %d", eventTimeWindow)
-							offsetCache[eventTimeWindow] = make(map[int32]int64)
-							offsetCache[eventTimeWindow][partition] = offset
-						} else if offsetTimeWindow[partition] <= 0 || offset <= offsetTimeWindow[partition]{
-							log.Debugf("Updated offset for partition %d to %d", partition, offset)
-							offsetTimeWindow[partition] = offset
-						}
-					}
-				}
-				log.Debug(metricEnvelope)
-				inCounter.Inc()
 			case kafka.OffsetsCommitted:
 				log.Infof("Commited offsets ", e)
+
 			case kafka.PartitionEOF:
 				//log.Infof("%% Reached %v", e)
+
 			case kafka.Error:
 				log.Fatalf("%% Error: %v", e)
 			}
