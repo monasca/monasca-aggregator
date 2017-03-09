@@ -41,7 +41,10 @@ E.g. When perfoming a sum for a series only the running total is kept in memory 
 Aggregations for metrics are processed based on the timestamp of the metric in event time, and not the process time or time at which it is being processed.
 
 * Stop/start, crash/restarts handling.
-Kafka offsets are manually committed after an aggregation is produced to allow processing to start from where the last successful aggregation ended. Therefore, aggregations are computed with no data loss.
+Kafka offsets are manually committed after an aggregation is produced to allow processing to start off from where the last successful aggregation ended.
+Therefore, aggregations are computed with no data loss.
+If for any reason the processing stops in the middle of a time window the Kafka offsets will not have been committed for that time window.
+At start-up the Kafka offsets are read from Kafka and processing starts off from the last succesful commit.
 
 * Domain Specific Language (DSL).
 A simple expressive DSL for specifying aggregations.
