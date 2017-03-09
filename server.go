@@ -272,14 +272,7 @@ func processMessage(e *kafka.Message) {
 			windowAggregations = timeWindowAggregations[eventTimeWindow]
 		}
 
-		var aggregationKey = aggregationSpecification.AggregatedMetricName
-
-		// make the key unique for the supplied groupings
-		if aggregationSpecification.GroupedDimensions != nil {
-			for _, key := range aggregationSpecification.GroupedDimensions {
-				aggregationKey += "," + key + ":" + metric.Dimensions[key]
-			}
-		}
+		aggregationKey := utils.GetGroupedAggregationKey(metric, aggregationSpecification)
 		log.Debugf("Storing key %s", aggregationKey)
 
 		currentMetric := windowAggregations[aggregationKey]
