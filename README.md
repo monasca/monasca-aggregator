@@ -1,4 +1,6 @@
-# ![monasca-aggregation](https://photos-3.dropbox.com/t/2/AABUtCKREPgNoxyDzwPS9R2zACBW2i8lhO3QRHykGthlvw/12/442004266/png/32x32/3/1489042800/0/2/OpenStack_Project_Monasca_mascot.png/EPrB40IYj54HIAIoAg/nxOqRLZpYcMepsb_bitQEmj0VGCfwUnnwTOP-tjNFGs?dl=0&size=1600x1200&size_mode=3)
+# monasca-aggregation
+
+![Monasca](https://photos-3.dropbox.com/t/2/AABUtCKREPgNoxyDzwPS9R2zACBW2i8lhO3QRHykGthlvw/12/442004266/png/32x32/3/1489042800/0/2/OpenStack_Project_Monasca_mascot.png/EPrB40IYj54HIAIoAg/nxOqRLZpYcMepsb_bitQEmj0VGCfwUnnwTOP-tjNFGs?dl=0&size=1600x1200&size_mode=3)
 
 A high-speed near real-time continuous aggregation micro-service for Monasca with the following features:
 
