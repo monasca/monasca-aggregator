@@ -1,6 +1,6 @@
-# monasca-aggregation ![Monasca](https://photos-4.dropbox.com/t/2/AACFXG42MVRNxIUJeM7oPsbP-l8rdewy3Z1WOSIcQaaMVQ/12/442004266/jpeg/32x32/3/1489042800/0/2/OpenStack_Project_Monasca_vertical.jpg/EPrB40IYj54HIAIoAg/RBtScHXgY-izQgUAbC4qgfJbdxZZwZ0WOK2xvpYcjLw?dl=0&size=1600x1200&size_mode=3)
+# ![monasca-aggregation](https://photos-4.dropbox.com/t/2/AACFXG42MVRNxIUJeM7oPsbP-l8rdewy3Z1WOSIcQaaMVQ/12/442004266/jpeg/32x32/3/1489042800/0/2/OpenStack_Project_Monasca_vertical.jpg/EPrB40IYj54HIAIoAg/RBtScHXgY-izQgUAbC4qgfJbdxZZwZ0WOK2xvpYcjLw?dl=0&size=640x480&size_mode=3)
 
-A high-speed near real-time aggregation micro-service for Monasca with the following features:
+A high-speed near real-time continuous aggregation micro-service for Monasca with the following features:
 
 * Read metrics from Kafka.
 
@@ -48,7 +48,8 @@ See, [aggregations.yaml](aggregations.yaml).
 It is possible it is greater than 100K metrics/sec, but we'll need a different testing strategy to verify.
 
 * Testable.
-Due to it's lightweight design and footprint, as well as ability to specify small windows sizes, it is very easy to test. For example, for testing purpose it is possible to aggregate with 10 second window sizes.
+Due to it's lightweight design and footprint, as well as ability to specify small windows sizes, it is very easy to test.
+For example, for testing purpose it is possible to aggregate with 10 second window sizes.
 
 * Written in Go.
 
