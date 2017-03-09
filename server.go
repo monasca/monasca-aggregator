@@ -52,15 +52,13 @@ var config = initConfig()
 var aggregations = initAggregationSpecs()
 
 func init() {
-	prometheus.MustRegister(inCounter)
-	prometheus.MustRegister(outCounter)
-}
-
-func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
+
+	prometheus.MustRegister(inCounter)
+	prometheus.MustRegister(outCounter)
 }
 
 func initConfig() *viper.Viper {
@@ -310,9 +308,6 @@ func processMessage(e *kafka.Message) {
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
-	initLogging()
-	initConfig()
-
 	windowSize = time.Duration(config.GetInt("WindowSize") * 1e9)
 	windowLag = time.Duration(config.GetInt("WindowLag") * 1e9)
 	consumerTopic := config.GetString("consumerTopic")
