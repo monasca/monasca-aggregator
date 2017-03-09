@@ -286,15 +286,7 @@ func processMessage(e *kafka.Message) {
 
 		// create a new metric if one did not exist
 		if currentMetric.Name == "" {
-			currentMetric.Name = aggregationSpecification.AggregatedMetricName
-			currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
-			if currentMetric.Dimensions == nil {
-				currentMetric.Dimensions = map[string]string{}
-			}
-			for _, key := range aggregationSpecification.GroupedDimensions {
-				currentMetric.Dimensions[key] = metric.Dimensions[key]
-			}
-			currentMetric.Value = metric.Value
+			currentMetric = utils.CreateNewAggregatedMetric(metric, aggregationSpecification)
 			currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
 			windowAggregations[aggregationKey] = currentMetric
 		} else {
