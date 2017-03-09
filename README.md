@@ -57,13 +57,13 @@ It is possible it is greater than 100K metrics/sec, but we'll need a different t
 
 * Dependencies: Dependent on only the following Go libraries:
 
-* [Confluent's Apache Kafka client for Golang](https://github.com/confluentinc/confluent-kafka-go)
+  * [Confluent's Apache Kafka client for Golang](https://github.com/confluentinc/confluent-kafka-go)
 
-* [Prometheus Go Client Library](https://github.com/prometheus/client_golang)
+  * [Prometheus Go Client Library](https://github.com/prometheus/client_golang)
 
-* [logrus](https://github.com/sirupsen/logrus)
+  * [logrus](https://github.com/sirupsen/logrus)
 
-* [Viper](https://github.com/spf13/viper)
+  * [Viper](https://github.com/spf13/viper)
 
 * No additional runtime requirements, beyond Apache Kafka, such as Apache Spark and Apache Storm.
 In addition, no additional databases required. For example, Kafka offsets are stored in Kafka and do not require an external database, such as MySQL.
