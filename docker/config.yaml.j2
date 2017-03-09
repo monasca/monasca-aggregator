@@ -8,4 +8,4 @@ kafka:
   group.id: {{ KAFKA_GROUP_ID | default('monasca-aggregation') }}
 
 prometheus:
-  endpoint: localhost:8080
+  endpoint: 0.0.0.0:8080
