@@ -47,7 +47,7 @@ Kafka offsets are manually committed after an aggregation is produced to allow p
 Therefore, aggregations are computed with no data loss.
 If for any reason  processing stops in the middle of a time window the Kafka offsets will not be committed for that time window.
 When re-started, the Kafka offsets are read from Kafka and processing starts off from the last succesful commit.
-This implies that metrics may be read from Kafka multiple times, but there is no data loss.
+This implies that metrics may be read from Kafka multiple times in the event of a re-start, but there is no data loss.
 
 * Domain Specific Language (DSL).
 A simple expressive DSL for specifying aggregations.
@@ -84,7 +84,7 @@ Since processing is continuous and only the aggregations are stored in memory, s
 * Testable.
 Due to it's lightweight design and footprint, as well as ability to specify small windows sizes, it is very easy to test.
 For example, when testing it is possible to aggregate with 10 second window sizes.
-In addition, due to Go and the small set of dependencies, it is possible to run monasca-aggregation on a laptop without any additional runtime environment, other than Kafka.
+In addition, due to Go and a small set of dependencies, it is possible to run monasca-aggregation on a laptop without any additional runtime environment, other than Kafka.
 
 * Instrumented using the [Prometheus Go Client Library](https://github.com/prometheus/client_golang) and [logrus](https://github.com/sirupsen/logrus).
 
@@ -94,30 +94,32 @@ See [config.yaml](config.yaml) and [aggregation-specifications.yaml](aggregation
 
 ## References
 
-Several of the concepts, such as time windows, continuous aggregations, event time processing, are best described in the following resources.
+Several of the concepts, such as time windows, continuous aggregations, event time processing, are best described in the following references.
 
 ### Kafka Streams
 
-Although Kafka Stream wasn't used, these references serve as excellent background.
+Although Kafka Stream wasn't used, these references serve as excellent background on stream processing.
 
-[Introducing Kafka Streams: Stream Processing Made Simple](https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/)
+* [Introducing Kafka Streams: Stream Processing Made Simple](https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/)
 
-[Introduction to Streaming Data and Stream Processing with Apache Kafka](https://www.confluent.io/apache-kafka-talk-series/introduction-to-stream-processing-with-apache-kafka/})
+* [Introduction to Streaming Data and Stream Processing with Apache Kafka](https://www.confluent.io/apache-kafka-talk-series/introduction-to-stream-processing-with-apache-kafka/})
 
-[]Kafka Streams](http://docs.confluent.io/3.0.0/streams/)
+* [Kafka Streams](http://docs.confluent.io/3.0.0/streams/)
 
 ### Google and Apache Beam
 
-Although Apache Beam isn't used here, Tyler Akidau et al's seminal paper, which led to the Apache Beam project, is an excellent reference for understanding event time and process time windowing/processing.
+Although Apache Beam isn't used here, Tyler Akidau et al's seminal paper, which led to the Apache Beam project, is an excellent reference for understanding event and process time windowing/processing.
 
-[The Dataflow Model: A Practical Approach to Balancing
+* [The Dataflow Model: A Practical Approach to Balancing
  Correctness, Latency, and Cost in Massive-Scale,
  Unbounded, Out-of-Order Data Processing](http://www.vldb.org/pvldb/vol8/p1792-Akidau.pdf)
  
- [The world beyond batch: Streaming 101](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101)
+* [The world beyond batch: Streaming 101](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101)
  
- [The world beyond batch: Streaming 102](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102)
+* [The world beyond batch: Streaming 102](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102)
+
+* [MillWheel: Fault-Tolerant Stream Processing at Internet Scale](https://research.google.com/pubs/pub41378.html)
+
+### Misc
  
- ### Misc
- 
- [Building Scalable Stateful Services by Caitie McCaffrey](https://www.youtube.com/watch?v=H0i_bXKwujQ&feature=youtu.be&a)
+* [Building Scalable Stateful Services by Caitie McCaffrey](https://www.youtube.com/watch?v=H0i_bXKwujQ&feature=youtu.be&a)
