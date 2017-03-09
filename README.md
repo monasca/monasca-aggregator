@@ -52,21 +52,18 @@ It is possible it is greater than 100K metrics/sec, but we'll need a different t
 
 * Written in Go.
 
-* Dependencies:
+* Dependencies: Dependent on only the following Go libraries:
 
-  * Dependent on only the following Go libraries:
-  
-    * [Confluent's Apache Kafka client for Golang](https://github.com/confluentinc/confluent-kafka-go)
-    
-    * [Prometheus Go Client Library](https://github.com/prometheus/client_golang)
-    
-    * [logrus](https://github.com/sirupsen/logrus)
-    
-    * [Viper](https://github.com/spf13/viper)
-  
-  * No additional runtime requirements, beyond Apache Kafka, such as Apache Spark and Apache Storm.
-  
-  * No additional databases required. For example, Kafka offsets are stored in Kafka and do not require an external database, such as MySQL.
+* [Confluent's Apache Kafka client for Golang](https://github.com/confluentinc/confluent-kafka-go)
+
+* [Prometheus Go Client Library](https://github.com/prometheus/client_golang)
+
+* [logrus](https://github.com/sirupsen/logrus)
+
+* [Viper](https://github.com/spf13/viper)
+
+* No additional runtime requirements, beyond Apache Kafka, such as Apache Spark and Apache Storm.
+In addition, no additional databases required. For example, Kafka offsets are stored in Kafka and do not require an external database, such as MySQL.
 
 * Instantaneous start-up times.
 Due to it's lightweight design and use of Go, start-up times are extremely fast.
