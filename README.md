@@ -1,6 +1,6 @@
 # monasca-aggregation
 
-A high-speed aggregation micro-service for Monasca with the following features:
+A high-speed near real-time aggregation micro-service for Monasca with the following features:
 
 * Read metrics from Kafka.
 
@@ -26,7 +26,7 @@ A high-speed aggregation micro-service for Monasca with the following features:
 
 * Lag time. Produce aggregations at a specified lag time from the end of the time window. The time at which the aggregations start is set based on a "lag" time, which is the duration past the end of the time window. For example, 10 minutes past the hour. This can be set to any value, such as 10 hours if desired.
 
-* Continuous aggregations. Totals are stored in memory, not metrics. Therefore the metrics don't need to be pulled into memory and operated on in a batch.
+* Continuous near real-time aggregations. Aggregations are stored in memory, not metrics. Therefore the metrics don't need to be pulled into memory and operated on in a batch.
 
 * Event time window processing. Aggregations for metrics are processed based on the timestamp of the metric in event time, and not the process time or time at which it is being processed.
 
