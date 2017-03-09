@@ -193,12 +193,12 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	}
 
 	// TODO: Confirm messages published before committing offsets
-	offsetList, activeTimeWindow := getMinOffsets(activeTimeWindow, topic)
+	offsetList := getMinOffsets(activeTimeWindow, topic)
 	commitOffsets(offsetList, c)
 	deleteInactiveTimeWindows(activeTimeWindow)
 }
 // Get the min offsets in Kafka for each time window.
-func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.TopicPartition, int64) {
+func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.TopicPartition) {
 	var offsetList = map[int32]kafka.TopicPartition{}
 	for eventWindow, partitions := range offsetCache {
 		if eventWindow > activeTimeWindow {
@@ -217,7 +217,7 @@ func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.Topic
 			}
 		}
 	}
-	return offsetList, activeTimeWindow
+	return offsetList
 }
 // Commit the Kafka offsets.
 func commitOffsets(offsetList map[int32]kafka.TopicPartition, c *kafka.Consumer) {
