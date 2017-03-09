@@ -104,7 +104,7 @@ Although Kafka Stream wasn't used, these references serve as excellent backgroun
 
 [Introduction to Streaming Data and Stream Processing with Apache Kafka](https://www.confluent.io/apache-kafka-talk-series/introduction-to-stream-processing-with-apache-kafka/})
 
-[]Kafka Streams(http://docs.confluent.io/3.0.0/streams/)
+[]Kafka Streams](http://docs.confluent.io/3.0.0/streams/)
 
 ### Google and Apache Beam
 
