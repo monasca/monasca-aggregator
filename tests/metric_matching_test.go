@@ -122,7 +122,7 @@ func TestMatchMetricSimpleNameInvalidName(t *testing.T) {
 		FilteredMetricName: "test_metric",
 	}
 
-	result := MatchMetric(agg_spec, metric)
+	result := utils.MatchMetric(agg_spec, metric)
 	if result != false {
 		t.Fail()
 	}
@@ -150,7 +150,7 @@ func TestMatchMetricNameAndDimensionsInvalidDimension(t *testing.T) {
 		},
 	}
 
-	result := MatchMetric(agg_spec, metric)
+	result := utils.MatchMetric(agg_spec, metric)
 	if result != false {
 		t.Fail()
 	}
@@ -179,8 +179,8 @@ func TestMatchMetricNameAndMultipleDimensionsInvalidDimension(t *testing.T) {
 		},
 	}
 
-	result := MatchMetric(agg_spec, metric)
-	if result != true {
+	result := utils.MatchMetric(agg_spec, metric)
+	if result != false {
 		t.Fail()
 	}
 }
