@@ -98,7 +98,12 @@ Several of the concepts, such as time windows, continuous aggregations, event ti
 
 ### Kafka Streams
 
-Although Kafka Stream wasn't used, these references serve as excellent background on stream processing.
+Although Kafka Stream isn't used here, it serves as excellent background on stream processing.
+One of the main concepts that Kafka Streams introduces is a time windowed key/value store that can be used to store aggregations.
+If used wisely, this can help address more complicated scenarios, such as fail/re-start, without having to manually manage and commit Kafka offsets.
+Kafka Streams is a really exciting technology, but we didn't use it here, as it is only available in Java.
+However, several of the concepts in Kafka Streams are used here.
+Hopefully, Kafka Streams is ported to Go someday.
 
 * [Introducing Kafka Streams: Stream Processing Made Simple](https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/)
 
@@ -108,7 +113,7 @@ Although Kafka Stream wasn't used, these references serve as excellent backgroun
 
 ### Google and Apache Beam
 
-Although Apache Beam isn't used here, Tyler Akidau et al's seminal paper, which led to the Apache Beam project, is an excellent reference for understanding event and process time windowing/processing.
+Although Apache Beam isn't used here, Tyler Akidau et al's seminal paper, which led to the Apache Beam project, is an excellent reference for understanding event and process time windowing.
 
 * [The Dataflow Model: A Practical Approach to Balancing
  Correctness, Latency, and Cost in Massive-Scale,
