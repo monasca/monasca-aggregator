@@ -34,7 +34,7 @@ import (
 
 var windowSize time.Duration
 var windowLag time.Duration
-var timeWindowAggregations = map[int64]map[string]models.Metric{}
+var timeWindowAggregations = map[int64]map[string]models.MetricEnvelope{}
 // map[timewindow][partition]offset
 var offsetCache = map[int64]map[int32]int64{}
 
@@ -165,7 +165,6 @@ func firstTick() *time.Timer {
 }
 
 func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.Consumer) {
-	// TODO make timestamp assignment the beginning of the aggregation window
 	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
@@ -181,12 +180,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 			continue
 		}
 		for _, value := range windowAggregations {
-			var metricEnvelope = models.MetricEnvelope{
-				value,
-				map[string]string{},
-				int64(time.Now().Unix() * 1000)}
-
-			value, _ := json.Marshal(metricEnvelope)
+			value, _ := json.Marshal(value)
 
 			outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
 			outCounter.Inc()
@@ -266,24 +260,44 @@ func processMessage(e *kafka.Message) {
 
 		var windowAggregations = timeWindowAggregations[eventTimeWindow]
 		if windowAggregations == nil {
-			timeWindowAggregations[eventTimeWindow] = make(map[string]models.Metric)
+			timeWindowAggregations[eventTimeWindow] = make(map[string]models.MetricEnvelope)
 			windowAggregations = timeWindowAggregations[eventTimeWindow]
 		}
 
-		aggregationKey := utils.GetGroupedAggregationKey(metric, aggregationSpecification)
+		aggregationKey := aggregationSpecification.AggregatedMetricName + metricEnvelope.Meta["tenantId"]
+
+		// make the key unique for the supplied groupings
+		if aggregationSpecification.GroupedDimensions != nil {
+			for _, key := range aggregationSpecification.GroupedDimensions {
+				aggregationKey += "," + key + ":" + metric.Dimensions[key]
+			}
+		}
 		log.Debugf("Storing key %s", aggregationKey)
 
-		currentMetric := windowAggregations[aggregationKey]
+		currentMetric := windowAggregations[aggregationKey].Metric
 
 		// create a new metric if one did not exist
 		if currentMetric.Name == "" {
-			currentMetric = utils.CreateNewAggregatedMetric(metric, aggregationSpecification)
+			currentMetric.Name = aggregationSpecification.AggregatedMetricName
+			currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
+
+			if currentMetric.Dimensions == nil {
+				currentMetric.Dimensions = map[string]string{}
+			}
+			for _, key := range aggregationSpecification.GroupedDimensions {
+				currentMetric.Dimensions[key] = metric.Dimensions[key]
+			}
+			currentMetric.Value = metric.Value
 			currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
-			windowAggregations[aggregationKey] = currentMetric
 		} else {
 			currentMetric.Value += metric.Value
-			windowAggregations[aggregationKey] = currentMetric
 		}
+		windowAggregations[aggregationKey] = models.MetricEnvelope{
+			Metric: currentMetric,
+			Meta: metricEnvelope.Meta,
+			CreationTime: time.Now().Unix() * 1000,
+		}
+
 
 		// update offsets for time window
 		offsetTimeWindow := offsetCache[eventTimeWindow]
