@@ -278,15 +278,18 @@ func processMessage(e *kafka.Message) {
 
 		// create a new metric if one did not exist
 		if currentMetric.Name == "" {
+			//TODO: add protection against specifying the same dimension in filtering and grouping
 			currentMetric.Name = aggregationSpecification.AggregatedMetricName
 			currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
 
 			if currentMetric.Dimensions == nil {
 				currentMetric.Dimensions = map[string]string{}
 			}
+			// get grouped dimension values
 			for _, key := range aggregationSpecification.GroupedDimensions {
 				currentMetric.Dimensions[key] = metric.Dimensions[key]
 			}
+
 			currentMetric.Value = metric.Value
 			currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
 		} else {
