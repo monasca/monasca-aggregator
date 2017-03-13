@@ -30,11 +30,12 @@ import (
 	"net/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.hpe.com/UNCLE/monasca-aggregation/utils"
+	"github.hpe.com/UNCLE/monasca-aggregation/aggregation"
 )
 
 var windowSize time.Duration
 var windowLag time.Duration
-var timeWindowAggregations = map[int64]map[string]models.StorageMetric{}
+var timeWindowAggregations = map[int64]map[string]aggregation.MetricHolder{}
 // map[timewindow][partition]offset
 var offsetCache = map[int64]map[int32]int64{}
 
@@ -170,7 +171,6 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
 	var activeTimeWindow = currentTimeWindow + windowLagCount
 	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
-	log.Debugf("activeTimeWindow: %d", activeTimeWindow)
 	log.Debug(timeWindowAggregations)
 
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
@@ -260,7 +260,7 @@ func processMessage(e *kafka.Message) {
 
 		var windowAggregations = timeWindowAggregations[eventTimeWindow]
 		if windowAggregations == nil {
-			timeWindowAggregations[eventTimeWindow] = make(map[string]models.StorageMetric)
+			timeWindowAggregations[eventTimeWindow] = make(map[string]aggregation.MetricHolder)
 			windowAggregations = timeWindowAggregations[eventTimeWindow]
 		}
 
@@ -279,7 +279,7 @@ func processMessage(e *kafka.Message) {
 		// create a new metric if one did not exist
 		if currentMetric == nil {
 			//TODO: add protection against specifying the same dimension in filtering and grouping
-			currentMetric = models.CreateMetricType(aggregationSpecification, metricEnvelope)
+			currentMetric = aggregation.CreateMetricType(aggregationSpecification, metricEnvelope)
 			currentMetric.SetTimestamp(float64(eventTimeWindow * 1000 * int64(windowSize.Seconds())))
 		} else {
 			currentMetric.UpdateValue(metric.Value)
