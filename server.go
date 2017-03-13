@@ -34,7 +34,7 @@ import (
 
 var windowSize time.Duration
 var windowLag time.Duration
-var timeWindowAggregations = map[int64]map[string]models.MetricEnvelope{}
+var timeWindowAggregations = map[int64]map[string]models.StorageMetric{}
 // map[timewindow][partition]offset
 var offsetCache = map[int64]map[int32]int64{}
 
@@ -179,8 +179,8 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 		if t > activeTimeWindow {
 			continue
 		}
-		for _, value := range windowAggregations {
-			value, _ := json.Marshal(value)
+		for _, metric := range windowAggregations {
+			value, _ := json.Marshal(metric.GetMetric())
 
 			outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
 			outCounter.Inc()
@@ -260,11 +260,11 @@ func processMessage(e *kafka.Message) {
 
 		var windowAggregations = timeWindowAggregations[eventTimeWindow]
 		if windowAggregations == nil {
-			timeWindowAggregations[eventTimeWindow] = make(map[string]models.MetricEnvelope)
+			timeWindowAggregations[eventTimeWindow] = make(map[string]models.StorageMetric)
 			windowAggregations = timeWindowAggregations[eventTimeWindow]
 		}
 
-		aggregationKey := aggregationSpecification.AggregatedMetricName + metricEnvelope.Meta["tenantId"]
+		aggregationKey := aggregationSpecification.AggregatedMetricName + "," + metricEnvelope.Meta["tenantId"]
 
 		// make the key unique for the supplied groupings
 		if aggregationSpecification.GroupedDimensions != nil {
@@ -274,32 +274,17 @@ func processMessage(e *kafka.Message) {
 		}
 		log.Debugf("Storing key %s", aggregationKey)
 
-		currentMetric := windowAggregations[aggregationKey].Metric
+		currentMetric := windowAggregations[aggregationKey]
 
 		// create a new metric if one did not exist
-		if currentMetric.Name == "" {
+		if currentMetric == nil {
 			//TODO: add protection against specifying the same dimension in filtering and grouping
-			currentMetric.Name = aggregationSpecification.AggregatedMetricName
-			currentMetric.Dimensions = aggregationSpecification.FilteredDimensions
-
-			if currentMetric.Dimensions == nil {
-				currentMetric.Dimensions = map[string]string{}
-			}
-			// get grouped dimension values
-			for _, key := range aggregationSpecification.GroupedDimensions {
-				currentMetric.Dimensions[key] = metric.Dimensions[key]
-			}
-
-			currentMetric.Value = metric.Value
-			currentMetric.Timestamp = float64(eventTimeWindow * 1000 * int64(windowSize.Seconds()))
+			currentMetric = models.CreateMetricType(aggregationSpecification, metricEnvelope)
+			currentMetric.SetTimestamp(float64(eventTimeWindow * 1000 * int64(windowSize.Seconds())))
 		} else {
-			currentMetric.Value += metric.Value
+			currentMetric.UpdateValue(metric.Value)
 		}
-		windowAggregations[aggregationKey] = models.MetricEnvelope{
-			Metric: currentMetric,
-			Meta: metricEnvelope.Meta,
-			CreationTime: time.Now().Unix() * 1000,
-		}
+		windowAggregations[aggregationKey] = currentMetric
 
 
 		// update offsets for time window
@@ -337,6 +322,10 @@ func main() {
 
 	sigchan := make(chan os.Signal)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigchan
+		log.Fatalf("Caught signal %v: terminating", sig)
+	}()
 
 	c := initConsumer(consumerTopic, groupId, bootstrapServers)
 	defer c.Close()
@@ -361,13 +350,9 @@ func main() {
 
 	for true {
 		select {
-		case sig := <-sigchan:
-			log.Fatalf("Caught signal %v: terminating", sig)
-
 		case <-firstTick.C:
 			ticker = time.NewTicker(windowSize)
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
-
 		case <-ticker.C:
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 

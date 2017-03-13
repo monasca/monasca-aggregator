@@ -44,29 +44,23 @@ func main() {
 
 	fmt.Printf("Created Producer %v\n", p)
 
-	doneChan := make(chan bool)
-
-	go func() {
-	outer:
-		for e := range p.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				m := ev
-				if m.TopicPartition.Error != nil {
-					fmt.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
-				} else {
-					fmt.Printf("Delivered message to topic %s [%d] at offset %v\n",
-						*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
-				}
-				break outer
-
-			default:
-				fmt.Printf("Ignored event: %s\n", ev)
-			}
-		}
-
-		close(doneChan)
-	}()
+	//go func() {
+	//	for e := range p.Events() {
+	//		switch ev := e.(type) {
+	//		case *kafka.Message:
+	//			m := ev
+	//			if m.TopicPartition.Error != nil {
+	//				fmt.Printf("Delivery failed: %v\n", m.TopicPartition.Error)
+	//			} else {
+	//				fmt.Printf("Delivered message to topic %s [%d] at offset %v\n",
+	//					*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
+	//			}
+	//
+	//		default:
+	//			fmt.Printf("Ignored event: %s\n", ev)
+	//		}
+	//	}
+	//}()
 
 	for {
 		for i := 0; i < 3; i++ {
@@ -75,7 +69,7 @@ func main() {
 				dimensions := map[string]string{"service": strconv.Itoa(i), "hostname": strconv.Itoa(j)}
 
 				var metricEnvelope = models.MetricEnvelope{
-					models.Metric{"metric2", dimensions, float64(time.Now().Unix()) * 1000, 1.0, map[string]string{}},
+					models.Metric{"metric2", dimensions, float64(time.Now().Unix()) * 1000, 2.0, map[string]string{}},
 					map[string]string{},
 					int64(time.Now().Unix() * 1000)}
 
@@ -86,11 +80,6 @@ func main() {
 		}
 
 		time.Sleep(time.Second)
-
-		// wait for delivery report goroutine to finish
-		_ = <-doneChan
-
-		//fmt.Printf("Done waiting\n")
 
 	}
 
