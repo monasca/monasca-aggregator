@@ -25,4 +25,3 @@ func (c *countMetric) InitValue(float64) {
 func (c *countMetric) UpdateValue(float64) {
 	c.envelope.Metric.Value += 1
 }
-
