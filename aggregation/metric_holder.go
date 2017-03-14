@@ -44,6 +44,7 @@ func (b *baseHolder) SetTimestamp(t float64) {
 func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.MetricEnvelope) MetricHolder {
 	newMetricEnvelope := models.MetricEnvelope{}
 
+	//TODO: add protection against specifying the same dimension in filtering and grouping
 	newMetricEnvelope.Metric.Name = aggSpec.AggregatedMetricName
 	newMetricEnvelope.Metric.Dimensions = aggSpec.FilteredDimensions
 

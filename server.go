@@ -16,6 +16,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,14 +24,13 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	log "github.com/Sirupsen/logrus"
-
-	"github.hpe.com/UNCLE/monasca-aggregation/models"
-	"github.com/spf13/viper"
 	"github.com/prometheus/client_golang/prometheus"
-	"net/http"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.hpe.com/UNCLE/monasca-aggregation/utils"
+	"github.com/spf13/viper"
+
 	"github.hpe.com/UNCLE/monasca-aggregation/aggregation"
+	"github.hpe.com/UNCLE/monasca-aggregation/models"
+	"github.hpe.com/UNCLE/monasca-aggregation/utils"
 )
 
 var windowSize time.Duration
@@ -55,8 +55,33 @@ var aggregations = initAggregationSpecs()
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
+	//log.SetOutput(os.Stdout)
+	//log.SetLevel(log.InfoLevel)
+	logfile := config.GetString("logging.file")
+	if logfile != "" {
+		f, err := os.Create(logfile)
+		if err != nil {
+			log.SetOutput(os.Stdout)
+			log.Fatalf("Failed to create log file: %v", err)
+		}
+		log.SetOutput(f)
+	} else {
+		log.SetOutput(os.Stdout)
+	}
+
+	loglevel := config.GetString("logging.level")
+	switch loglevel {
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "WARN":
+		log.SetLevel(log.WarnLevel)
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.WarnLevel)
+	}
 
 	prometheus.MustRegister(inCounter)
 	prometheus.MustRegister(outCounter)
@@ -278,7 +303,6 @@ func processMessage(e *kafka.Message) {
 
 		// create a new metric if one did not exist
 		if currentMetric == nil {
-			//TODO: add protection against specifying the same dimension in filtering and grouping
 			currentMetric = aggregation.CreateMetricType(aggregationSpecification, metricEnvelope)
 			currentMetric.SetTimestamp(float64(eventTimeWindow * 1000 * int64(windowSize.Seconds())))
 		} else {

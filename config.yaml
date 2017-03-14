@@ -1,3 +1,7 @@
+logging:
+#  file: monasca-aggregation.log
+  level: INFO
+
 windowSize: 10
 windowLag: 2
 consumerTopic: metrics
