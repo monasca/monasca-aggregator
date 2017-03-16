@@ -322,7 +322,8 @@ func processMessage(e *kafka.Message) {
 }
 
 // TODO: Create Helm Charts
-// TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
+// DONE:Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
+// TODO Allow easy grouping on 'all' dimensions
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
