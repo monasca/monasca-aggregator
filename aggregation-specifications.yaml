@@ -1,18 +1,30 @@
 aggregationSpecifications:
   - name: Aggregation0
-    filteredMetricName: metric0
     aggregatedMetricName: aggregated-metric0
+    filteredMetricName: metric0
     function: count
+
   - name: Aggregation1
+    aggregatedMetricName: aggregated-metric1
     filteredMetricName: metric1
     filteredDimensions:
         hostname: test-01
-    aggregatedMetricName: aggregated-metric1
     function: sum
+
   - name: Aggregation2
+    aggregatedMetricName: aggregated-metric2
     filteredMetricName: metric2
     groupedDimensions:
-    - hostname
-    - service
-    aggregatedMetricName: aggregated-metric2
+      - hostname
+      - service
     function: avg
+
+  - name: Aggregation3
+    aggregatedMetricName: aggregated-metric3
+    filteredMetricName: metric3
+    groupedDimensions:
+      - hostname
+    function: avg
+    # use this to return a single metric (combining group results with the function specified)
+    rollup:
+      function: sum

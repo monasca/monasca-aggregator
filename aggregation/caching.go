@@ -12,18 +12,17 @@
 //    License for the specific language governing permissions and limitations
 //    under the License.
 
-package models
+package aggregation
 
-type AggregationSpecification struct {
-	Name                 string
-	Function	     string
-	FilteredMetricName   string
-	FilteredDimensions   map[string]string
-	GroupedDimensions    []string
-	AggregatedMetricName string
-	Rollup
+type MetricCache struct {
+	Windows map[int64]map[string]MetricHolder
 }
 
-type Rollup struct {
-	Function string
+func NewMetricCache() MetricCache {
+	return MetricCache{
+		Windows: make(map[int64]map[string]MetricHolder)}
+}
+
+func NewWindow() map[string]MetricHolder {
+	return make(map[string]MetricHolder)
 }
