@@ -207,15 +207,12 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) + 1
 	var activeTimeWindow = currentTimeWindow - windowLagCount
 	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
-
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
 	for _, rule := range aggregationRules {
-		log.Infof("Rule %s Cache: %v", rule.Name, rule.Windows)
 		windowLoop:
 		for windowTime := range rule.Windows {
 			if windowTime > activeTimeWindow {
-				log.Infof("Skipping window %d", windowTime)
 				continue windowLoop
 			}
 
@@ -283,8 +280,8 @@ func commitOffsets(offsetList map[int32]int64, topic *string, c *kafka.Consumer)
 }
 // Delete time window aggregations for inactive time windows.
 func deleteInactiveTimeWindows(activeTimeWindow int64) {
+	log.Debugf("Deleteing windows older than %d", activeTimeWindow)
 	for _, rule := range aggregationRules {
-		log.Debugf("Deleteing windows older than %d for rule %s", activeTimeWindow, rule.Name)
 		for windowTime := range rule.Windows {
 			if windowTime <= activeTimeWindow {
 				delete(rule.Windows, windowTime)
@@ -366,7 +363,7 @@ func main() {
 		log.Fatal(http.ListenAndServe(prometheusEndpoint, nil))
 	}()
 	log.Infof("Serving metrics on %s/metrics", prometheusEndpoint)
-	
+
 	for true {
 		select {
 		case <-firstTick.C:

@@ -26,4 +26,5 @@ type AggregationSpecification struct {
 
 type Rollup struct {
 	Function string
+	GroupedDimensions []string
 }

@@ -17,7 +17,7 @@ package aggregation
 import "github.hpe.com/UNCLE/monasca-aggregation/models"
 
 type MetricHolder interface {
- 	InitEnvelope(models.MetricEnvelope)
+	initEnvelope(models.MetricEnvelope)
 	InitValue(float64)
 	UpdateValue(float64)
 	GetMetric() models.MetricEnvelope
@@ -28,7 +28,7 @@ type baseHolder struct {
 	envelope models.MetricEnvelope
 }
 
-func (b *baseHolder) InitEnvelope(m models.MetricEnvelope) {
+func (b *baseHolder) initEnvelope(m models.MetricEnvelope) {
 	b.envelope = m
 }
 
@@ -56,6 +56,8 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 		newMetricEnvelope.Metric.Dimensions[key] = metricEnv.Metric.Dimensions[key]
 	}
 
+	newMetricEnvelope.Meta = metricEnv.Meta
+
 	var metric MetricHolder
 	switch aggSpec.Function {
 	case "count":
@@ -69,7 +71,7 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 	case "avg":
 		metric = new(avgMetric)
 	}
-	metric.InitEnvelope(newMetricEnvelope)
+	metric.initEnvelope(newMetricEnvelope)
 	metric.InitValue(metricEnv.Metric.Value)
 	return metric
 }

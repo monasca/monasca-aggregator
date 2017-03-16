@@ -69,7 +69,6 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 
 	//TODO check for metrics existing before doing extra work
 	window := a.Windows[eventTime]
-	log.Infof("Rule %s Window %d: %v", a.Name, eventTime, window)
 
 	if a.Rollup.Function == "" {
 		metricsList = make([]models.MetricEnvelope, len(window))
@@ -79,7 +78,7 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 			i++
 		}
 	} else {
-		log.Infof("Executing rollup: %v", a.Rollup.Function)
+		log.Debugf("Executing rollup: %v", a.Rollup.Function)
 
 		rollupMetricMap := make(map[string]MetricHolder)
 
@@ -87,14 +86,20 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 			metricEnv := metricHolder.GetMetric()
 
 			rollupKey := metricEnv.Meta["tenantId"]
+			if a.Rollup.GroupedDimensions != nil {
+				for _, key := range a.Rollup.GroupedDimensions {
+					rollupKey += "," + key + ":" + metricEnv.Metric.Dimensions[key]
+				}
+			}
 
 			rollupMetric, exists := rollupMetricMap[rollupKey]
 			if !exists {
 				tempAgg := a.AggregationSpecification
 				tempAgg.Function = a.Rollup.Function
+				tempAgg.GroupedDimensions = a.Rollup.GroupedDimensions
 
 				newRollup := CreateMetricType(tempAgg, metricEnv)
-				newRollup.InitEnvelope(metricEnv)
+				log.Debugf("Created new rollup: %v", newRollup)
 				newRollup.SetTimestamp(metricEnv.Metric.Timestamp)
 
 				rollupMetric = newRollup
@@ -103,8 +108,6 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 				rollupMetric.UpdateValue(metricEnv.Metric.Value)
 			}
 		}
-
-		log.Infof("Rollup Map: %v", rollupMetricMap)
 
 		//convert to list
 		metricsList = make([]models.MetricEnvelope, len(rollupMetricMap))
@@ -115,7 +118,7 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 		}
 	}
 
-	log.Infof("Emitting Metrics: %v", metricsList)
+	log.Debugf("Emitting Metrics: %v", metricsList)
 
 	return metricsList
 }

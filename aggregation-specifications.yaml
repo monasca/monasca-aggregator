@@ -24,7 +24,10 @@ aggregationSpecifications:
     filteredMetricName: metric3
     groupedDimensions:
       - hostname
+      - service
     function: avg
     # use this to return a single metric (combining group results with the function specified)
     rollup:
       function: sum
+      groupedDimensions:
+        - service
