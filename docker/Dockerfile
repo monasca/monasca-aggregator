@@ -27,4 +27,4 @@ run echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/reposit
 copy config.yaml.j2 template.py start.sh /
 expose 8080
 
-cmd ['/start.sh']
+cmd ["/start.sh"]
