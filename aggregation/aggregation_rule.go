@@ -28,6 +28,10 @@ type AggregationRule struct {
 
 
 func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule {
+	if aggSpec.AggregatedMetricName == "" {
+		log.Fatalf("Rule %s must have an aggregated metric name")
+	}
+
 	return AggregationRule{
 		AggregationSpecification: aggSpec,
 		MetricCache: NewMetricCache(),
