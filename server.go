@@ -210,6 +210,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
 	for _, rule := range aggregationRules {
+		log.Debugf("Rule: %s", rule.Name)
 		windowLoop:
 		for windowTime := range rule.Windows {
 			if windowTime > activeTimeWindow {
@@ -322,6 +323,7 @@ func processMessage(e *kafka.Message) {
 }
 
 // TODO: Create Helm Charts
+// TODO: Add validation for aggregation rules (and metrics?)
 // DONE:Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO Allow easy grouping on 'all' dimensions
 // TODO: Allow start/end consumer offsets to be specified as parameters.
