@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,14 +31,12 @@ import (
 
 	"github.hpe.com/UNCLE/monasca-aggregation/aggregation"
 	"github.hpe.com/UNCLE/monasca-aggregation/models"
-	"github.hpe.com/UNCLE/monasca-aggregation/utils"
 )
 
 var windowSize time.Duration
 var windowLag time.Duration
-var timeWindowAggregations = map[int64]map[string]aggregation.MetricHolder{}
-// map[timewindow][partition]offset
-var offsetCache = map[int64]map[int32]int64{}
+
+var offsetCache = make(map[int64]map[int32]int64)
 
 //init global references to counters
 var inCounter = prometheus.NewCounter(
@@ -51,6 +50,8 @@ var outCounter = prometheus.NewCounter(
 
 var config = initConfig()
 var aggregations = initAggregationSpecs()
+
+var aggregationRules = initAggregationRules(aggregations)
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -70,7 +71,7 @@ func init() {
 	}
 
 	loglevel := config.GetString("logging.level")
-	switch loglevel {
+	switch strings.ToUpper(loglevel) {
 	case "DEBUG":
 		log.SetLevel(log.DebugLevel)
 	case "INFO":
@@ -123,6 +124,16 @@ func initAggregationSpecs() []models.AggregationSpecification {
 	return aggregations
 }
 
+func initAggregationRules(specifications [] models.AggregationSpecification) []aggregation.AggregationRule {
+	var rules = make([]aggregation.AggregationRule, len(specifications))
+	i := 0
+	for _, spec := range specifications {
+		rules[i] = aggregation.NewAggregationRule(spec)
+		i++
+	}
+	return rules
+}
+
 func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consumer {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":               bootstrapServers,
@@ -170,7 +181,7 @@ func handleProducerEvents(p *kafka.Producer) {
 			if m.TopicPartition.Error != nil {
 				log.Errorf("Delivery failed: %v\n", m.TopicPartition.Error)
 			} else {
-				log.Infof("Delivered message to topic %s [%d] at offset %v\n",
+				log.Debugf("Delivered message to topic %s [%d] at offset %v\n",
 					*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
 			}
 
@@ -191,78 +202,96 @@ func firstTick() *time.Timer {
 }
 
 func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.Consumer) {
-	log.Debug(timeWindowAggregations)
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
-	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) - 1
-	var activeTimeWindow = currentTimeWindow + windowLagCount
+	// roof(windowLag / windowSize) i.e. number of windows in the lag time
+	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) + 1
+	var activeTimeWindow = currentTimeWindow - windowLagCount
 	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
-	log.Debug(timeWindowAggregations)
-
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
-	for t, windowAggregations := range timeWindowAggregations {
-		if t > activeTimeWindow {
-			continue
-		}
-		for _, metric := range windowAggregations {
-			value, _ := json.Marshal(metric.GetMetric())
+	for _, rule := range aggregationRules {
+		log.Debugf("Rule: %s", rule.Name)
+		windowLoop:
+		for windowTime := range rule.Windows {
+			if windowTime > activeTimeWindow {
+				continue windowLoop
+			}
 
-			outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
-			outCounter.Inc()
+			for _, metric := range rule.GetMetrics(windowTime) {
+				metric.CreationTime = time.Now().Unix() * 1000
+				value, _ := json.Marshal(metric)
+
+				outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
+				outCounter.Inc()
+			}
 		}
 	}
 
 	// TODO: Confirm messages published before committing offsets
-	offsetList := getMinOffsets(activeTimeWindow, topic)
-	commitOffsets(offsetList, c)
+	offsetList := maxOffsets(activeTimeWindow)
+	commitOffsets(offsetList, topic, c)
+
 	deleteInactiveTimeWindows(activeTimeWindow)
 }
-// Get the min offsets in Kafka for each time window.
-func getMinOffsets(activeTimeWindow int64, topic *string) (map[int32]kafka.TopicPartition) {
-	var offsetList = map[int32]kafka.TopicPartition{}
-	for eventWindow, partitions := range offsetCache {
-		if eventWindow > activeTimeWindow {
+
+func maxOffsets(eventTime int64) map[int32]int64 {
+	output := make(map[int32]int64)
+
+	for windowTime, window := range offsetCache {
+		if windowTime > eventTime {
 			continue
 		}
-		for partition, offset := range partitions {
-			if int64(offsetList[partition].Offset) <= 0 || offset <= int64(offsetList[partition].Offset) {
-				// kafka expects the offset of the next message to read, so add one
-				new_offset, err := kafka.NewOffset(offset + 1)
-				if err != nil {
-					log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, offset)
-				}
-				offsetList[partition] = kafka.TopicPartition{
-					Topic:     topic,
-					Partition: partition,
-					Offset:    new_offset}
+
+		for partition, offset := range window {
+			old_offset, exists := output[partition]
+			if !exists || offset > old_offset {
+				output[partition] = offset
 			}
 		}
 	}
-	return offsetList
+	return output
 }
+
 // Commit the Kafka offsets.
-func commitOffsets(offsetList map[int32]kafka.TopicPartition, c *kafka.Consumer) {
-	if len(offsetList) > 0 {
-		finalOffsets := make([]kafka.TopicPartition, len(offsetList))
-		idx := 0
-		for _, value := range offsetList {
-			finalOffsets[idx] = value
-			idx++
-		}
-		log.Debug(finalOffsets)
-		_, err := c.CommitOffsets(finalOffsets)
+func commitOffsets(offsetList map[int32]int64, topic *string, c *kafka.Consumer) {
+	if len(offsetList) <= 0 {
+		log.Debug("No new offsets, skipping commit")
+		return
+	}
+	//convert ints to kafka structures
+	finalOffsets := make([]kafka.TopicPartition, len(offsetList))
+	idx := 0
+	for partition, value := range offsetList {
+		newOffset, err := kafka.NewOffset(value + 1)
 		if err != nil {
-			log.Errorf("Consumer errors submitting offsets %v", err)
+			log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, value)
 		}
+		finalOffsets[idx] = kafka.TopicPartition{
+			Topic:     topic,
+			Partition: partition,
+			Offset:    newOffset}
+		idx++
+	}
+
+	log.Infof("Committing offsets: %v", finalOffsets)
+	_, err := c.CommitOffsets(finalOffsets)
+	if err != nil {
+		log.Errorf("Consumer errors submitting offsets %v", err)
 	}
 }
 // Delete time window aggregations for inactive time windows.
 func deleteInactiveTimeWindows(activeTimeWindow int64) {
-	for timeWindow := range timeWindowAggregations {
-		if timeWindow <= activeTimeWindow {
-			log.Debugf("Delete time window %d", timeWindow)
-			delete(timeWindowAggregations, timeWindow)
-			delete(offsetCache, timeWindow)
+	log.Debugf("Deleteing windows older than %d", activeTimeWindow)
+	for _, rule := range aggregationRules {
+		for windowTime := range rule.Windows {
+			if windowTime <= activeTimeWindow {
+				delete(rule.Windows, windowTime)
+			}
+		}
+	}
+	for windowTime := range offsetCache {
+		if windowTime <= activeTimeWindow {
+			delete(offsetCache, windowTime)
 		}
 	}
 }
@@ -274,63 +303,29 @@ func processMessage(e *kafka.Message) {
 		log.Warnf("%% Invalid metric envelope on %s:%s", e.TopicPartition, string(e.Value))
 		return
 	}
-	var metric = metricEnvelope.Metric
 
-	var eventTimeWindow = int64(metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
-
-	for _, aggregationSpecification := range aggregations {
-		if !utils.MatchMetric(aggregationSpecification, metric) {
-			continue
-		}
-
-		var windowAggregations = timeWindowAggregations[eventTimeWindow]
-		if windowAggregations == nil {
-			timeWindowAggregations[eventTimeWindow] = make(map[string]aggregation.MetricHolder)
-			windowAggregations = timeWindowAggregations[eventTimeWindow]
-		}
-
-		aggregationKey := aggregationSpecification.AggregatedMetricName + "," + metricEnvelope.Meta["tenantId"]
-
-		// make the key unique for the supplied groupings
-		if aggregationSpecification.GroupedDimensions != nil {
-			for _, key := range aggregationSpecification.GroupedDimensions {
-				aggregationKey += "," + key + ":" + metric.Dimensions[key]
-			}
-		}
-		log.Debugf("Storing key %s", aggregationKey)
-
-		currentMetric := windowAggregations[aggregationKey]
-
-		// create a new metric if one did not exist
-		if currentMetric == nil {
-			currentMetric = aggregation.CreateMetricType(aggregationSpecification, metricEnvelope)
-			currentMetric.SetTimestamp(float64(eventTimeWindow * 1000 * int64(windowSize.Seconds())))
-		} else {
-			currentMetric.UpdateValue(metric.Value)
-		}
-		windowAggregations[aggregationKey] = currentMetric
-
-
-		// update offsets for time window
-		offsetTimeWindow := offsetCache[eventTimeWindow]
-		partition := e.TopicPartition.Partition
-		offset := int64(e.TopicPartition.Offset)
-		if offsetTimeWindow == nil {
-			log.Debugf("Initialized offset window %d", eventTimeWindow)
-			offsetCache[eventTimeWindow] = make(map[int32]int64)
-			offsetCache[eventTimeWindow][partition] = offset
-		} else if offsetTimeWindow[partition] <= 0 || offset <= offsetTimeWindow[partition]{
-			log.Debugf("Updated offset for partition %d to %d", partition, offset)
-			offsetTimeWindow[partition] = offset
+	for _, rule := range aggregationRules {
+		if rule.MatchesMetric(metricEnvelope) {
+			rule.AddMetric(metricEnvelope, windowSize)
 		}
 	}
+
+	eventTime := int64(metricEnvelope.Metric.Timestamp) / (1000 * int64(windowSize.Seconds()))
+	_, exists := offsetCache[eventTime]
+	if !exists {
+		offsetCache[eventTime] = make(map[int32]int64)
+	}
+	//we can assume each new message read is the latest offset for its partition
+	offsetCache[eventTime][e.TopicPartition.Partition] = int64(e.TopicPartition.Offset)
 
 	log.Debug(metricEnvelope)
 	inCounter.Inc()
 }
 
 // TODO: Create Helm Charts
-// TODO: Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
+// TODO: Add validation for aggregation rules (and metrics?)
+// DONE:Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
+// TODO Allow easy grouping on 'all' dimensions
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.
 func main() {
