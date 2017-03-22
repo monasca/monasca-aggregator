@@ -21,8 +21,10 @@ A high-speed near real-time continuous aggregation micro-service for Monasca wit
 * Supported aggregations include the following:
  
   * sum
-  
-  * others will be supported in the near future
+  * count
+  * avg
+  * min
+  * max
 
 * Aggregate on specified window sizes. Support any window size. E.g. 10 seconds or one hour.
 
