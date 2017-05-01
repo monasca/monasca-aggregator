@@ -14,7 +14,7 @@
 
 package aggregation
 
-import "github.hpe.com/UNCLE/monasca-aggregation/models"
+import "github.com/monasca/monasca-aggregator/models"
 
 type MetricHolder interface {
 	initEnvelope(models.MetricEnvelope)
@@ -39,7 +39,6 @@ func (b *baseHolder) GetMetric() models.MetricEnvelope {
 func (b *baseHolder) SetTimestamp(t float64) {
 	b.envelope.Metric.Timestamp = t
 }
-
 
 func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.MetricEnvelope) MetricHolder {
 	newMetricEnvelope := models.MetricEnvelope{}

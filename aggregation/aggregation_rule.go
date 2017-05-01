@@ -17,7 +17,7 @@ package aggregation
 import (
 	log "github.com/Sirupsen/logrus"
 
-	"github.hpe.com/UNCLE/monasca-aggregation/models"
+	"github.com/monasca/monasca-aggregator/models"
 	"time"
 )
 
@@ -26,7 +26,6 @@ type AggregationRule struct {
 	MetricCache
 }
 
-
 func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule {
 	if aggSpec.AggregatedMetricName == "" {
 		log.Fatalf("Rule %s must have an aggregated metric name")
@@ -34,12 +33,12 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule
 
 	return AggregationRule{
 		AggregationSpecification: aggSpec,
-		MetricCache: NewMetricCache(),
+		MetricCache:              NewMetricCache(),
 	}
 }
 
-func (a * AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {
-	eventTime := int64(metricEnvelope.Metric.Timestamp / float64(1000 * int64(windowSize.Seconds())))
+func (a *AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {
+	eventTime := int64(metricEnvelope.Metric.Timestamp / float64(1000*int64(windowSize.Seconds())))
 
 	_, exists := a.Windows[eventTime]
 	if !exists {
@@ -156,7 +155,7 @@ func (a *AggregationRule) MatchesMetric(newMetric models.MetricEnvelope) bool {
 }
 
 func matchDimensions(dimensionsSpec map[string]string, actual map[string]string) bool {
-	outer:
+outer:
 	for s_key, s_value := range dimensionsSpec {
 		for a_key, a_value := range actual {
 			if s_key == a_key && s_value == a_value {
@@ -170,7 +169,7 @@ func matchDimensions(dimensionsSpec map[string]string, actual map[string]string)
 }
 
 func matchDimensionKeys(keySpec []string, actual map[string]string) bool {
-	outer:
+outer:
 	for _, s_key := range keySpec {
 		for a_key := range actual {
 			if s_key == a_key {

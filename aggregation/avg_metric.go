@@ -14,11 +14,11 @@
 
 package aggregation
 
-import "github.hpe.com/UNCLE/monasca-aggregation/models"
+import "github.com/monasca/monasca-aggregator/models"
 
 type avgMetric struct {
 	baseHolder
-	count      int64
+	count int64
 }
 
 func (a *avgMetric) InitValue(v float64) {

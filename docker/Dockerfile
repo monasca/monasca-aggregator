@@ -1,7 +1,7 @@
 # librdkafka is not available in a stable alpine release
 from alpine:edge
 
-arg AGGREGATION_REPO=https://github.hpe.com/UNCLE/monasca-aggregation
+arg AGGREGATION_REPO=https://github.com/monasca/monasca-aggregator
 arg AGGREGATION_BRANCH=master
 
 env GOPATH=/go
@@ -10,8 +10,8 @@ run echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/reposit
   apk add --no-cache openssl py2-jinja2 && \
   apk add --no-cache --virtual build-dep \
     librdkafka-dev git go make g++ openssl-dev && \
-  mkdir -p $GOPATH/src/github.hpe.com/UNCLE/monasca-aggregation && \
-  cd $GOPATH/src/github.hpe.com/UNCLE/monasca-aggregation && \
+  mkdir -p $GOPATH/src/github.com/monasca/monasca-aggregator && \
+  cd $GOPATH/src/github.com/monasca/monasca-aggregator && \
   git init && \
   git remote add origin $AGGREGATION_REPO && \
   git fetch origin $AGGREGATION_BRANCH && \

@@ -23,14 +23,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	log "github.com/Sirupsen/logrus"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 
-	"github.hpe.com/UNCLE/monasca-aggregation/aggregation"
-	"github.hpe.com/UNCLE/monasca-aggregation/models"
+	"github.com/monasca/monasca-aggregator/aggregation"
+	"github.com/monasca/monasca-aggregator/models"
 )
 
 var windowSize time.Duration
@@ -124,7 +124,7 @@ func initAggregationSpecs() []models.AggregationSpecification {
 	return aggregations
 }
 
-func initAggregationRules(specifications [] models.AggregationSpecification) []aggregation.AggregationRule {
+func initAggregationRules(specifications []models.AggregationSpecification) []aggregation.AggregationRule {
 	var rules = make([]aggregation.AggregationRule, len(specifications))
 	i := 0
 	for _, spec := range specifications {
@@ -141,7 +141,7 @@ func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consum
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
-		"enable.auto.commit":		   false,
+		"enable.auto.commit":              false,
 		"default.topic.config":            kafka.ConfigMap{"auto.offset.reset": "earliest"},
 	})
 
@@ -195,7 +195,7 @@ func handleProducerEvents(p *kafka.Producer) {
 // TODO: Check this math to account for all boundary conditions and large lag times
 func firstTick() *time.Timer {
 	now := time.Now().Unix()
-	completed := now % int64(windowSize.Seconds()) - int64(windowLag.Seconds())
+	completed := now%int64(windowSize.Seconds()) - int64(windowLag.Seconds())
 	remaining := int64(windowSize.Seconds()) - completed
 	firstTick := time.NewTimer(time.Duration(remaining * 1e9))
 	return firstTick
@@ -204,14 +204,14 @@ func firstTick() *time.Timer {
 func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.Consumer) {
 	var currentTimeWindow = int64(time.Now().Unix()) / int64(windowSize.Seconds())
 	// roof(windowLag / windowSize) i.e. number of windows in the lag time
-	var windowLagCount = int64(windowLag.Seconds() / windowSize.Seconds()) + 1
+	var windowLagCount = int64(windowLag.Seconds()/windowSize.Seconds()) + 1
 	var activeTimeWindow = currentTimeWindow - windowLagCount
 	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
 	for _, rule := range aggregationRules {
 		log.Debugf("Rule: %s", rule.Name)
-		windowLoop:
+	windowLoop:
 		for windowTime := range rule.Windows {
 			if windowTime > activeTimeWindow {
 				continue windowLoop
@@ -279,6 +279,7 @@ func commitOffsets(offsetList map[int32]int64, topic *string, c *kafka.Consumer)
 		log.Errorf("Consumer errors submitting offsets %v", err)
 	}
 }
+
 // Delete time window aggregations for inactive time windows.
 func deleteInactiveTimeWindows(activeTimeWindow int64) {
 	log.Debugf("Deleteing windows older than %d", activeTimeWindow)
@@ -322,9 +323,7 @@ func processMessage(e *kafka.Message) {
 	inCounter.Inc()
 }
 
-// TODO: Create Helm Charts
 // TODO: Add validation for aggregation rules (and metrics?)
-// DONE:Add support for consuming/publishing intermediary aggregations. For example, publish a (sum, count) to use in an avg aggregation
 // TODO Allow easy grouping on 'all' dimensions
 // TODO: Allow start/end consumer offsets to be specified as parameters.
 // TODO: Allow start/end aggregation period to be specified.

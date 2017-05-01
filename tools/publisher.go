@@ -15,13 +15,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/monasca/monasca-aggregator/models"
 	"os"
-	"github.hpe.com/UNCLE/monasca-aggregation/models"
-	"time"
-	"encoding/json"
 	"strconv"
+	"time"
 )
 
 func main() {
