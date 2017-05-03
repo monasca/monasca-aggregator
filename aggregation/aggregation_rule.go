@@ -28,7 +28,13 @@ type AggregationRule struct {
 
 func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule {
 	if aggSpec.AggregatedMetricName == "" {
-		log.Fatalf("Rule %s must have an aggregated metric name")
+		log.Fatalf("Rule %s must have an aggregated metric name", aggSpec.Name)
+	}
+	if aggSpec.FilteredMetricName == "" {
+		log.Fatalf("Rule %s must have a filtered metric name", aggSpec.Name)
+	}
+	if aggSpec.Function == "" {
+		log.Fatalf("Rule %s must have a function", aggSpec.Name)
 	}
 
 	return AggregationRule{
