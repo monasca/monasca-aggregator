@@ -1,6 +1,4 @@
-# monasca-aggregation
-
-![Monasca](https://photos-3.dropbox.com/t/2/AABUtCKREPgNoxyDzwPS9R2zACBW2i8lhO3QRHykGthlvw/12/442004266/png/32x32/3/1489042800/0/2/OpenStack_Project_Monasca_mascot.png/EPrB40IYj54HIAIoAg/nxOqRLZpYcMepsb_bitQEmj0VGCfwUnnwTOP-tjNFGs?dl=0&size=1600x1200&size_mode=3)
+# monasca-aggregator
 
 ## Introduction
 
@@ -100,7 +98,7 @@ Several of the concepts, such as time windows, continuous aggregations, event ti
 
 ### Kafka Streams
 
-Although Kafka Stream isn't used here, it serves as excellent background on stream processing.
+Although Kafka Streams isn't used by monasca-aggregator, it serves as excellent background on stream processing.
 One of the main concepts that Kafka Streams introduces is a time windowed key/value store that can be used to store aggregations.
 If used wisely, this can help address more complicated scenarios, such as fail/re-start, without having to manually manage and commit Kafka offsets.
 Kafka Streams is a really exciting technology, but we didn't use it here, as it is only available in Java.
