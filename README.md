@@ -92,6 +92,11 @@ In addition, due to Go and a small set of dependencies, it is possible to run mo
 Viper supports many configuration options, but we use it for yaml config files.
 See [config.yaml](config.yaml) and [aggregation-specifications.yaml](aggregation-specifications.yaml)
 
+## Documentation
+
+* [Aggregation Specifications](./docs/aggregations.md)
+* [Installing and Running Locally](./docs/local_install.md)
+
 ## References
 
 Several of the concepts, such as time windows, continuous aggregations, event time processing, are best described in the following references.
