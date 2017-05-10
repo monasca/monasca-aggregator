@@ -59,7 +59,7 @@ func (a *AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, window
 			aggregationKey += "," + key + ":" + metricEnvelope.Metric.Dimensions[key]
 		}
 	}
-	log.Infof("Storing key %s at %d", aggregationKey, eventTime)
+	log.Debugf("Storing key %s at %d", aggregationKey, eventTime)
 
 	currentMetric, exists := a.Windows[eventTime][aggregationKey]
 	// create a new metric if one did not exist
