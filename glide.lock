@@ -1,0 +1,85 @@
+hash: 3bd57e9b45a1c3a1369f3ddb47117921974b7e16b814ca7da981baea4fc88619
+updated: 2017-06-21T15:27:27.387954649-06:00
+imports:
+- name: github.com/beorn7/perks
+  version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+  subpackages:
+  - quantile
+- name: github.com/confluentinc/confluent-kafka-go
+  version: a9b5c269c66e9a2eb5f195563b2f01e65a84c527
+  subpackages:
+  - kafka
+- name: github.com/fsnotify/fsnotify
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
+- name: github.com/golang/protobuf
+  version: e325f446bebc2998605911c0a2650d9920361d4a
+  subpackages:
+  - proto
+- name: github.com/hashicorp/hcl
+  version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
+  subpackages:
+  - hcl/ast
+  - hcl/parser
+  - hcl/scanner
+  - hcl/strconv
+  - hcl/token
+  - json/parser
+  - json/scanner
+  - json/token
+- name: github.com/magiconair/properties
+  version: 51463bfca2576e06c62a8504b5c0f06d61312647
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
+- name: github.com/mitchellh/mapstructure
+  version: d0303fe809921458f417bcf828397a65db30a7e4
+- name: github.com/pelletier/go-buffruneio
+  version: c37440a7cf42ac63b919c752ca73a85067e05992
+- name: github.com/pelletier/go-toml
+  version: fe7536c3dee2596cdd23ee9976a17c22bdaae286
+- name: github.com/prometheus/client_golang
+  version: de4d4ffe63b9eff7f27484fdef6e421597e6abb4
+  subpackages:
+  - prometheus
+  - prometheus/promhttp
+- name: github.com/prometheus/client_model
+  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 1f00413b80e5953826db4f62a74bc417f9344ba3
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: a3bfc74126ea9e45ee5d5c6f7fc86191b7d488fb
+  subpackages:
+  - xfs
+- name: github.com/Sirupsen/logrus
+  version: 202f25545ea4cf9b191ff7f846df5d87c9382c2b
+- name: github.com/spf13/afero
+  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
+  subpackages:
+  - mem
+- name: github.com/spf13/cast
+  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
+- name: github.com/spf13/jwalterweatherman
+  version: 0efa5202c04663c757d84f90f5219c1250baf94f
+- name: github.com/spf13/pflag
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+- name: github.com/spf13/viper
+  version: c1de95864d73a5465492829d7cb2dd422b19ac96
+- name: golang.org/x/sys
+  version: fb4cac33e3196ff7f507ab9b2d2a44b0142f5b5a
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: 4e9ab9ee170f2a39bd66c92b3e0a47ff47a4bc77
+  subpackages:
+  - transform
+  - unicode/norm
+- name: gopkg.in/yaml.v2
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
+testImports: []
