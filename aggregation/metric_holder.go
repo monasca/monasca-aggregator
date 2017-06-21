@@ -69,6 +69,10 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 		metric = new(minMetric)
 	case "avg":
 		metric = new(avgMetric)
+	case "rate":
+		metric = new(rateMetric)
+	case "delta":
+		metric = new(deltaMetric)
 	}
 	metric.initEnvelope(newMetricEnvelope)
 	metric.InitValue(metricEnv)
