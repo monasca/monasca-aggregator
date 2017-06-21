@@ -1,0 +1,13 @@
+package: github.com/monasca/monasca-aggregator
+import:
+- package: github.com/Sirupsen/logrus
+  version: ^1.0.0
+- package: github.com/confluentinc/confluent-kafka-go
+  version: ^0.9.4
+  subpackages:
+  - kafka
+- package: github.com/prometheus/client_golang
+  subpackages:
+  - prometheus
+  - prometheus/promhttp
+- package: github.com/spf13/viper
