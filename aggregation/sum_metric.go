@@ -14,14 +14,16 @@
 
 package aggregation
 
+import "github.com/monasca/monasca-aggregator/models"
+
 type sumMetric struct {
 	baseHolder
 }
 
-func (s *sumMetric) InitValue(v float64) {
-	s.envelope.Metric.Value = v
+func (s *sumMetric) InitValue(v models.MetricEnvelope) {
+	s.envelope.Metric.Value = v.Metric.Value
 }
 
-func (s *sumMetric) UpdateValue(v float64) {
-	s.envelope.Metric.Value += v
+func (s *sumMetric) UpdateValue(v models.MetricEnvelope) {
+	s.envelope.Metric.Value += v.Metric.Value
 }

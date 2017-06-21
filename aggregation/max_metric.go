@@ -14,16 +14,18 @@
 
 package aggregation
 
+import "github.com/monasca/monasca-aggregator/models"
+
 type maxMetric struct {
 	baseHolder
 }
 
-func (max *maxMetric) InitValue(v float64) {
-	max.envelope.Metric.Value = v
+func (max *maxMetric) InitValue(v models.MetricEnvelope) {
+	max.envelope.Metric.Value = v.Metric.Value
 }
 
-func (max *maxMetric) UpdateValue(v float64) {
-	if max.envelope.Metric.Value < v {
-		max.envelope.Metric.Value = v
+func (max *maxMetric) UpdateValue(v models.MetricEnvelope) {
+	if max.envelope.Metric.Value < v.Metric.Value {
+		max.envelope.Metric.Value = v.Metric.Value
 	}
 }

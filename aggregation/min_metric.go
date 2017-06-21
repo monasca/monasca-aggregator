@@ -14,16 +14,18 @@
 
 package aggregation
 
+import "github.com/monasca/monasca-aggregator/models"
+
 type minMetric struct {
 	baseHolder
 }
 
-func (min *minMetric) InitValue(v float64) {
-	min.envelope.Metric.Value = v
+func (min *minMetric) InitValue(v models.MetricEnvelope) {
+	min.envelope.Metric.Value = v.Metric.Value
 }
 
-func (min *minMetric) UpdateValue(v float64) {
-	if min.envelope.Metric.Value > v {
-		min.envelope.Metric.Value = v
+func (min *minMetric) UpdateValue(v models.MetricEnvelope) {
+	if min.envelope.Metric.Value > v.Metric.Value {
+		min.envelope.Metric.Value = v.Metric.Value
 	}
 }
