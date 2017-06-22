@@ -21,13 +21,13 @@ type avgMetric struct {
 	count int64
 }
 
-func (a *avgMetric) InitValue(v float64) {
-	a.envelope.Metric.Value = v
+func (a *avgMetric) InitValue(v models.MetricEnvelope) {
+	a.envelope.Metric.Value = v.Metric.Value
 	a.count = 1
 }
 
-func (a *avgMetric) UpdateValue(v float64) {
-	a.envelope.Metric.Value += v
+func (a *avgMetric) UpdateValue(v models.MetricEnvelope) {
+	a.envelope.Metric.Value += v.Metric.Value
 	a.count++
 }
 

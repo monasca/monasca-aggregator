@@ -14,14 +14,16 @@
 
 package aggregation
 
+import "github.com/monasca/monasca-aggregator/models"
+
 type countMetric struct {
 	baseHolder
 }
 
-func (c *countMetric) InitValue(float64) {
+func (c *countMetric) InitValue(models.MetricEnvelope) {
 	c.envelope.Metric.Value = 1
 }
 
-func (c *countMetric) UpdateValue(float64) {
+func (c *countMetric) UpdateValue(models.MetricEnvelope) {
 	c.envelope.Metric.Value += 1
 }

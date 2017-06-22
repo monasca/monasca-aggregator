@@ -18,8 +18,8 @@ import "github.com/monasca/monasca-aggregator/models"
 
 type MetricHolder interface {
 	initEnvelope(models.MetricEnvelope)
-	InitValue(float64)
-	UpdateValue(float64)
+	InitValue(models.MetricEnvelope)
+	UpdateValue(models.MetricEnvelope)
 	GetMetric() models.MetricEnvelope
 	SetTimestamp(float64)
 }
@@ -69,8 +69,12 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 		metric = new(minMetric)
 	case "avg":
 		metric = new(avgMetric)
+	case "rate":
+		metric = new(rateMetric)
+	case "delta":
+		metric = new(deltaMetric)
 	}
 	metric.initEnvelope(newMetricEnvelope)
-	metric.InitValue(metricEnv.Metric.Value)
+	metric.InitValue(metricEnv)
 	return metric
 }

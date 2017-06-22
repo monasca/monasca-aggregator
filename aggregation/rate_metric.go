@@ -16,16 +16,28 @@ package aggregation
 
 import "github.com/monasca/monasca-aggregator/models"
 
-type maxMetric struct {
+type rateMetric struct {
 	baseHolder
+	startTime  float64
+	finalValue float64
+	finalTime  float64
 }
 
-func (max *maxMetric) InitValue(v models.MetricEnvelope) {
-	max.envelope.Metric.Value = v.Metric.Value
+func (r *rateMetric) InitValue(v models.MetricEnvelope) {
+	r.envelope.Metric.Value = v.Metric.Value
+	r.startTime = v.Metric.Timestamp
 }
 
-func (max *maxMetric) UpdateValue(v models.MetricEnvelope) {
-	if max.envelope.Metric.Value < v.Metric.Value {
-		max.envelope.Metric.Value = v.Metric.Value
-	}
+func (r *rateMetric) UpdateValue(v models.MetricEnvelope) {
+	r.finalValue = v.Metric.Value
+	r.finalTime = v.Metric.Timestamp
+}
+
+func (r *rateMetric) GetMetric() models.MetricEnvelope {
+	deltaValue := r.finalValue - r.envelope.Metric.Value
+	deltaTime := (r.finalTime - r.startTime) / 1000.0
+	ratePerSec := deltaValue / deltaTime
+
+	r.envelope.Metric.Value = ratePerSec
+	return r.baseHolder.GetMetric()
 }

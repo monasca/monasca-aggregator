@@ -23,6 +23,8 @@ A high-speed near real-time continuous aggregation micro-service for Monasca wit
   * avg
   * min
   * max
+  * delta
+  * rate
 
 * Aggregate on specified window sizes. Support any window size. E.g. 10 seconds or one hour.
 

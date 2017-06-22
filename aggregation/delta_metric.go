@@ -16,16 +16,21 @@ package aggregation
 
 import "github.com/monasca/monasca-aggregator/models"
 
-type maxMetric struct {
+type deltaMetric struct {
 	baseHolder
+	finalValue float64
 }
 
-func (max *maxMetric) InitValue(v models.MetricEnvelope) {
-	max.envelope.Metric.Value = v.Metric.Value
+func (d *deltaMetric) InitValue(v models.MetricEnvelope) {
+	d.envelope.Metric.Value = v.Metric.Value
 }
 
-func (max *maxMetric) UpdateValue(v models.MetricEnvelope) {
-	if max.envelope.Metric.Value < v.Metric.Value {
-		max.envelope.Metric.Value = v.Metric.Value
-	}
+func (d *deltaMetric) UpdateValue(v models.MetricEnvelope) {
+	d.finalValue = v.Metric.Value
+}
+
+func (d *deltaMetric) GetMetric() models.MetricEnvelope {
+	deltaValue := d.finalValue - d.envelope.Metric.Value
+	d.envelope.Metric.Value = deltaValue
+	return d.baseHolder.GetMetric()
 }

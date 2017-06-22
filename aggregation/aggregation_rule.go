@@ -68,7 +68,7 @@ func (a *AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, window
 		currentMetric = CreateMetricType(a.AggregationSpecification, metricEnvelope)
 		currentMetric.SetTimestamp(float64(eventTime * 1000 * int64(windowSize.Seconds())))
 	} else {
-		currentMetric.UpdateValue(metricEnvelope.Metric.Value)
+		currentMetric.UpdateValue(metricEnvelope)
 	}
 	a.Windows[eventTime][aggregationKey] = currentMetric
 }
@@ -114,7 +114,7 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 				rollupMetric = newRollup
 				rollupMetricMap[rollupKey] = rollupMetric
 			} else {
-				rollupMetric.UpdateValue(metricEnv.Metric.Value)
+				rollupMetric.UpdateValue(metricEnv)
 			}
 		}
 
