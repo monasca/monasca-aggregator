@@ -39,6 +39,16 @@ groupedDimensions:
   - service
 ```
 
+## Function
+The function determines how the data will be aggregated. Options are:
+* sum
+* count
+* avg - statistical mean
+* max
+* min
+* delta - result is the last reported value minus the first reported value
+* rate - result is the delta (as above) divided by number of seconds between the first and last timestamp
+
 ## Rollup
 This section allows aggregated groups defined above to be combined back into a single group via another aggregation
 function. For example, to get the total memory used on all systems, you may want to average each system then report
@@ -58,6 +68,7 @@ A complete example (including all components) might look like:
   aggregatedMetricName: kubernetes.cpu.total_sec
   filteredDimensions:
     cluster: test-cluster-1
+  function: avg
   groupedDimensions:
     - hostname
     - service
