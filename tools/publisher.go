@@ -36,6 +36,7 @@ func main() {
 	topic := os.Args[2]
 
 	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": broker})
+	defer p.Close()
 
 	if err != nil {
 		fmt.Printf("Failed to create producer: %s\n", err)
@@ -69,9 +70,14 @@ func main() {
 				dimensions := map[string]string{"service": strconv.Itoa(i), "hostname": strconv.Itoa(j)}
 
 				var metricEnvelope = models.MetricEnvelope{
-					models.Metric{"metric2", dimensions, float64(time.Now().Unix()) * 1000, 2.0, map[string]string{}},
-					map[string]string{},
-					int64(time.Now().Unix() * 1000)}
+					Metric: models.Metric{
+						Name:       "metric2",
+						Dimensions: dimensions,
+						Timestamp:  float64(time.Now().Unix()) * 1000,
+						Value:      2.0,
+						ValueMeta:  map[string]string{}},
+					Meta:         map[string]string{},
+					CreationTime: int64(time.Now().Unix() * 1000)}
 
 				value, _ := json.Marshal(metricEnvelope)
 
@@ -82,6 +88,4 @@ func main() {
 		time.Sleep(time.Second)
 
 	}
-
-	p.Close()
 }

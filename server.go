@@ -264,7 +264,7 @@ func commitOffsets(offsetList map[int32]int64, topic *string, c *kafka.Consumer)
 	for partition, value := range offsetList {
 		newOffset, err := kafka.NewOffset(value + 1)
 		if err != nil {
-			log.Fatalf("Failed to update kafka offset %s[%d]@%d", topic, partition, value)
+			log.Fatalf("Failed to update kafka offset %s[%d]@%d", *topic, partition, value)
 		}
 		finalOffsets[idx] = kafka.TopicPartition{
 			Topic:     topic,

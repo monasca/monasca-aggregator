@@ -1,5 +1,5 @@
 {
   "DisableAll": true,
-  "Enable": ["golint"],
+  "Enable": ["golint", "vet", "vetshadow"],
   "Exclude": ["exported .* should have comment or be unexported"]
 }
