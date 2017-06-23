@@ -1,4 +1,8 @@
 sudo: false
 language: go
+before_install:
+- apt-get install librdkafka-dev
+install:
+- glide install
 script:
 - golint --set_exit_status
