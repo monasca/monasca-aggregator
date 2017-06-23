@@ -5,7 +5,8 @@ addons:
   apt:
     packages:
     - librdkafka-dev
-    - glide
+before_install:
+- curl https://glide.sh/get | sh
 install:
 - glide install
 script:
