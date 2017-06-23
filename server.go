@@ -134,10 +134,10 @@ func initAggregationRules(specifications []models.AggregationSpecification) []ag
 	return rules
 }
 
-func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consumer {
+func initConsumer(consumerTopic, groupID, bootstrapServers string) *kafka.Consumer {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":               bootstrapServers,
-		"group.id":                        groupId,
+		"group.id":                        groupID,
 		"session.timeout.ms":              6000,
 		"go.events.channel.enable":        true,
 		"go.application.rebalance.enable": true,
@@ -156,7 +156,7 @@ func initConsumer(consumerTopic, groupId, bootstrapServers string) *kafka.Consum
 	if err != nil {
 		log.Fatalf("Failed to subscribe to topics %c", err)
 	}
-	log.Infof("Subscribed to topic %s as group %s", consumerTopic, groupId)
+	log.Infof("Subscribed to topic %s as group %s", consumerTopic, groupID)
 
 	return c
 }
@@ -243,8 +243,8 @@ func maxOffsets(eventTime int64) map[int32]int64 {
 		}
 
 		for partition, offset := range window {
-			old_offset, exists := output[partition]
-			if !exists || offset > old_offset {
+			oldOffset, exists := output[partition]
+			if !exists || offset > oldOffset {
 				output[partition] = offset
 			}
 		}
@@ -334,7 +334,7 @@ func main() {
 	producerTopic := config.GetString("producerTopic")
 
 	bootstrapServers := config.GetString("kafka.bootstrap.servers")
-	groupId := config.GetString("kafka.group.id")
+	groupID := config.GetString("kafka.group.id")
 
 	prometheusEndpoint := config.GetString("prometheus.endpoint")
 
@@ -345,7 +345,7 @@ func main() {
 		log.Fatalf("Caught signal %v: terminating", sig)
 	}()
 
-	c := initConsumer(consumerTopic, groupId, bootstrapServers)
+	c := initConsumer(consumerTopic, groupID, bootstrapServers)
 	defer c.Close()
 
 	p := initProducer(bootstrapServers)
@@ -357,7 +357,7 @@ func main() {
 
 	// align to time boundaries?
 	firstTick := firstTick()
-	var ticker *time.Ticker = new(time.Ticker)
+	var ticker = new(time.Ticker)
 
 	go func() {
 		// Start prometheus endpoint
