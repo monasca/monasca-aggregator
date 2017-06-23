@@ -1,0 +1,4 @@
+sudo: false
+language: go
+script:
+- golint --set_exit_status
