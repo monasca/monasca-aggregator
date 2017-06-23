@@ -2,7 +2,7 @@ sudo: false
 language: go
 addons:
   apt:
-    sources:
+    packages:
     - librdkafka-dev
     - glide
 install:
