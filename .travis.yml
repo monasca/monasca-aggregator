@@ -1,8 +1,10 @@
 sudo: false
 language: go
-before_install:
-- sudo apt-get install librdkafka-dev
-- sudo apt-get install glide
+addons:
+  apt:
+    sources:
+    - librdkafka-dev
+    - glide
 install:
 - glide install
 script:
