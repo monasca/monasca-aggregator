@@ -9,5 +9,6 @@ before_install:
 - curl https://glide.sh/get | sh
 install:
 - glide install
+- go get -u github.com/golang/lint/golint
 script:
 - golint --set_exit_status
