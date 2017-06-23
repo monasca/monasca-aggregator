@@ -124,8 +124,8 @@ func initAggregationSpecs() []models.AggregationSpecification {
 	return aggregations
 }
 
-func initAggregationRules(specifications []models.AggregationSpecification) []aggregation.AggregationRule {
-	var rules = make([]aggregation.AggregationRule, len(specifications))
+func initAggregationRules(specifications []models.AggregationSpecification) []aggregation.Rule {
+	var rules = make([]aggregation.Rule, len(specifications))
 	i := 0
 	for _, spec := range specifications {
 		rules[i] = aggregation.NewAggregationRule(spec)

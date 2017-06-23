@@ -25,5 +25,5 @@ func (c *countMetric) InitValue(models.MetricEnvelope) {
 }
 
 func (c *countMetric) UpdateValue(models.MetricEnvelope) {
-	c.envelope.Metric.Value += 1
+	c.envelope.Metric.Value++
 }

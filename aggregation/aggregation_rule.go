@@ -21,12 +21,12 @@ import (
 	"time"
 )
 
-type AggregationRule struct {
+type Rule struct {
 	models.AggregationSpecification
 	MetricCache
 }
 
-func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule {
+func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
 	if aggSpec.AggregatedMetricName == "" {
 		log.Fatalf("Rule %s must have an aggregated metric name", aggSpec.Name)
 	}
@@ -37,13 +37,13 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) AggregationRule
 		log.Fatalf("Rule %s must have a function", aggSpec.Name)
 	}
 
-	return AggregationRule{
+	return Rule{
 		AggregationSpecification: aggSpec,
 		MetricCache:              NewMetricCache(),
 	}
 }
 
-func (a *AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {
+func (a *Rule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {
 	eventTime := int64(metricEnvelope.Metric.Timestamp / float64(1000*int64(windowSize.Seconds())))
 
 	_, exists := a.Windows[eventTime]
@@ -73,7 +73,7 @@ func (a *AggregationRule) AddMetric(metricEnvelope models.MetricEnvelope, window
 	a.Windows[eventTime][aggregationKey] = currentMetric
 }
 
-func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
+func (a *Rule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 	var metricsList []models.MetricEnvelope
 
 	//TODO check for metrics existing before doing extra work
@@ -132,7 +132,7 @@ func (a *AggregationRule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 	return metricsList
 }
 
-func (a *AggregationRule) MatchesMetric(newMetric models.MetricEnvelope) bool {
+func (a *Rule) MatchesMetric(newMetric models.MetricEnvelope) bool {
 	result := true
 	if a.FilteredMetricName != "" && a.FilteredMetricName != newMetric.Metric.Name {
 		log.Debugf("Missing name %s", a.FilteredMetricName)
@@ -162,13 +162,13 @@ func (a *AggregationRule) MatchesMetric(newMetric models.MetricEnvelope) bool {
 
 func matchDimensions(dimensionsSpec map[string]string, actual map[string]string) bool {
 outer:
-	for s_key, s_value := range dimensionsSpec {
-		for a_key, a_value := range actual {
-			if s_key == a_key && s_value == a_value {
+	for sKey, sValue := range dimensionsSpec {
+		for aKey, aValue := range actual {
+			if sKey == aKey && sValue == aValue {
 				continue outer
 			}
 		}
-		log.Debugf("Missing dimension %s:%s", s_key, s_value)
+		log.Debugf("Missing dimension %s:%s", sKey, sValue)
 		return false
 	}
 	return true
@@ -176,13 +176,13 @@ outer:
 
 func matchDimensionKeys(keySpec []string, actual map[string]string) bool {
 outer:
-	for _, s_key := range keySpec {
-		for a_key := range actual {
-			if s_key == a_key {
+	for _, sKey := range keySpec {
+		for aKey := range actual {
+			if sKey == aKey {
 				continue outer
 			}
 		}
-		log.Debugf("Missing key %s", s_key)
+		log.Debugf("Missing key %s", sKey)
 		return false
 	}
 	return true
