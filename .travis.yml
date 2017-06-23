@@ -3,11 +3,11 @@ dist: trusty
 language: go
 addons:
   apt:
-    sources:
-    - ppa:masterminds/glide && sudo apt-get update
     packages:
     - librdkafka-dev
-    - glide
+before_install:
+- go get github.com/Masterminds/glide
+- cd $GOPATH/src/github.com/Masterminds/glide && git checkout 84607742b10f492430762d038e954236bbaf23f7 && go install && cd -
 install:
 - glide install
 - go get -u gopkg.in/alecthomas/gometalinter.v1
