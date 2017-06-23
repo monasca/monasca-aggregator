@@ -9,6 +9,6 @@ before_install:
 - curl https://glide.sh/get | sh
 install:
 - glide install
-- go get -u github.com/golang/lint/golint
+- go get -u gopkg.in/alecthomas/gometalinter.v1
 script:
-- golint --set_exit_status
+- gometalinter.v1 ./... --config=linterconfig.json --vendor
