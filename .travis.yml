@@ -12,6 +12,7 @@ install:
 - glide install
 - go get -u gopkg.in/alecthomas/gometalinter.v1
 - go get -u github.com/golang/lint/golint
+- export PKG_CONFIG_PATH=/usr/local
 script:
 - gometalinter.v1 ./... --config=linterconfig.json --vendor
 - echo $PKG_CONFIG_PATH
