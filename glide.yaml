@@ -3,7 +3,7 @@ import:
 - package: github.com/Sirupsen/logrus
   version: ^1.0.0
 - package: github.com/confluentinc/confluent-kafka-go
-  version: ^0.9.4
+  version: ^0.8.3
   subpackages:
   - kafka
 - package: github.com/prometheus/client_golang
