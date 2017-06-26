@@ -14,4 +14,5 @@ install:
 - go get -u github.com/golang/lint/golint
 script:
 - gometalinter.v1 ./... --config=linterconfig.json --vendor
-- CGO_ENABLED=0 go build -a -installsuffix cgo -o monasca-aggregator
+- echo $PKG_CONFIG_PATH
+- go build
