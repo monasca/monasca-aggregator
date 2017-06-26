@@ -1,5 +1,5 @@
 sudo: false
-dist: xenial
+dist: trusty
 language: go
 addons:
   apt:
@@ -14,4 +14,3 @@ install:
 - go get -u github.com/golang/lint/golint
 script:
 - gometalinter.v1 ./... --config=linterconfig.json --vendor
-- go build
