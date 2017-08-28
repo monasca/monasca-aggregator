@@ -31,3 +31,10 @@ aggregationSpecifications:
       function: sum
       groupedDimensions:
         - service
+
+  - name: Multi-Name Aggregation
+    aggregatedMetricName: multiNameAgg
+    filteredMetricNameList:
+    - metric1
+    - metric2
+    function: count

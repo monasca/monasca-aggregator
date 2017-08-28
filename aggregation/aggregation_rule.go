@@ -30,8 +30,12 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
 	if aggSpec.AggregatedMetricName == "" {
 		log.Fatalf("Rule %s must have an aggregated metric name", aggSpec.Name)
 	}
-	if aggSpec.FilteredMetricName == "" {
-		log.Fatalf("Rule %s must have a filtered metric name", aggSpec.Name)
+	if aggSpec.FilteredMetricName == "" && len(aggSpec.FilteredMetricNameList) <= 0 {
+		log.Fatalf("Rule %s must have a filtered metric name or filtered metric name list", aggSpec.Name)
+	}
+	if aggSpec.FilteredMetricName != "" && len(aggSpec.FilteredMetricNameList) > 0 {
+		log.Fatalf("Rule %s must have only one of fitered metric name or filtered metric name list",
+			aggSpec.Name)
 	}
 	if aggSpec.Function == "" {
 		log.Fatalf("Rule %s must have a function", aggSpec.Name)
@@ -137,6 +141,9 @@ func (a *Rule) MatchesMetric(newMetric models.MetricEnvelope) bool {
 	if a.FilteredMetricName != "" && a.FilteredMetricName != newMetric.Metric.Name {
 		log.Debugf("Missing name %s", a.FilteredMetricName)
 		result = false
+	} else if len(a.FilteredMetricNameList) > 0 && !isStringInList(newMetric.Metric.Name, a.FilteredMetricNameList) {
+		log.Debugf("Name %s not found in list %v", newMetric.Metric.Name, a.FilteredMetricNameList)
+		result = false
 	}
 
 	if a.FilteredDimensions != nil {
@@ -186,4 +193,13 @@ outer:
 		return false
 	}
 	return true
+}
+
+func isStringInList(target string, list []string) bool {
+	for _, item := range list {
+		if item == target {
+			return true
+		}
+	}
+	return false
 }
