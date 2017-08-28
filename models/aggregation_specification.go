@@ -15,16 +15,17 @@
 package models
 
 type AggregationSpecification struct {
-	Name                 string
-	Function	     string
-	FilteredMetricName   string
-	FilteredDimensions   map[string]string
-	GroupedDimensions    []string
-	AggregatedMetricName string
+	Name                   string
+	Function               string
+	FilteredMetricName     string
+	FilteredMetricNameList []string
+	FilteredDimensions     map[string]string
+	GroupedDimensions      []string
+	AggregatedMetricName   string
 	Rollup
 }
 
 type Rollup struct {
-	Function string
+	Function          string
 	GroupedDimensions []string
 }
