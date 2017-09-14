@@ -130,6 +130,7 @@ func initAggregationRules(specifications []models.AggregationSpecification) []ag
 	for _, spec := range specifications {
 		rules[i] = aggregation.NewAggregationRule(spec)
 		i++
+		log.Infof("New Spec: %v", spec)
 	}
 	return rules
 }
@@ -210,7 +211,6 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
 	for _, rule := range aggregationRules {
-		log.Debugf("Rule: %s", rule.Name)
 	windowLoop:
 		for windowTime := range rule.Windows {
 			if windowTime > activeTimeWindow {
@@ -304,6 +304,7 @@ func processMessage(e *kafka.Message) {
 		log.Warnf("%% Invalid metric envelope on %s:%s", e.TopicPartition, string(e.Value))
 		return
 	}
+	log.Debugf("Processing metric: %v", metricEnvelope)
 
 	for _, rule := range aggregationRules {
 		if rule.MatchesMetric(metricEnvelope) {
@@ -319,7 +320,6 @@ func processMessage(e *kafka.Message) {
 	//we can assume each new message read is the latest offset for its partition
 	offsetCache[eventTime][e.TopicPartition.Partition] = int64(e.TopicPartition.Offset)
 
-	log.Debug(metricEnvelope)
 	inCounter.Inc()
 }
 
