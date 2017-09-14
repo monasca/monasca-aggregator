@@ -44,6 +44,7 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
 }
 
 func (a *Rule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {
+	log.Debugf("Adding metric to %s", a.Name)
 	eventTime := int64(metricEnvelope.Metric.Timestamp / float64(1000*int64(windowSize.Seconds())))
 
 	_, exists := a.Windows[eventTime]
@@ -101,6 +102,7 @@ func (a *Rule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 				}
 			}
 
+			log.Debugf("RollupKey: %s", rollupKey)
 			rollupMetric, exists := rollupMetricMap[rollupKey]
 			if !exists {
 				tempAgg := a.AggregationSpecification
@@ -112,10 +114,11 @@ func (a *Rule) GetMetrics(eventTime int64) []models.MetricEnvelope {
 				newRollup.SetTimestamp(metricEnv.Metric.Timestamp)
 
 				rollupMetric = newRollup
-				rollupMetricMap[rollupKey] = rollupMetric
 			} else {
+				log.Debugf("Updating rollup: %s", rollupKey)
 				rollupMetric.UpdateValue(metricEnv)
 			}
+			rollupMetricMap[rollupKey] = rollupMetric
 		}
 
 		//convert to list

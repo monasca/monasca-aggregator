@@ -45,7 +45,10 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 
 	//TODO: add protection against specifying the same dimension in filtering and grouping
 	newMetricEnvelope.Metric.Name = aggSpec.AggregatedMetricName
-	newMetricEnvelope.Metric.Dimensions = aggSpec.FilteredDimensions
+	newMetricEnvelope.Metric.Dimensions = make(map[string]string)
+	for key, value := range aggSpec.FilteredDimensions {
+		newMetricEnvelope.Metric.Dimensions[key] = value
+	}
 
 	if newMetricEnvelope.Metric.Dimensions == nil {
 		newMetricEnvelope.Metric.Dimensions = map[string]string{}
@@ -55,7 +58,10 @@ func CreateMetricType(aggSpec models.AggregationSpecification, metricEnv models.
 		newMetricEnvelope.Metric.Dimensions[key] = metricEnv.Metric.Dimensions[key]
 	}
 
-	newMetricEnvelope.Meta = metricEnv.Meta
+	newMetricEnvelope.Meta = make(map[string]string)
+	for key, value := range metricEnv.Meta {
+		newMetricEnvelope.Meta[key] = value
+	}
 
 	var metric MetricHolder
 	switch aggSpec.Function {

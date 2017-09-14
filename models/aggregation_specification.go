@@ -16,7 +16,7 @@ package models
 
 type AggregationSpecification struct {
 	Name                 string
-	Function	     string
+	Function             string
 	FilteredMetricName   string
 	FilteredDimensions   map[string]string
 	GroupedDimensions    []string
@@ -25,6 +25,6 @@ type AggregationSpecification struct {
 }
 
 type Rollup struct {
-	Function string
+	Function          string
 	GroupedDimensions []string
 }
