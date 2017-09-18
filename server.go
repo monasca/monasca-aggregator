@@ -49,7 +49,7 @@ var outCounter = prometheus.NewCounter(
 		Help: "Number of messages written"})
 
 // This is a workaround to handle https://issues.apache.org/jira/browse/KAFKA-3593
-var lastMessage time.Time = time.Now()
+var lastMessage = time.Now()
 
 var config = initConfig()
 var aggregations = initAggregationSpecs()
