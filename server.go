@@ -48,6 +48,9 @@ var outCounter = prometheus.NewCounter(
 		Name: "out_messages",
 		Help: "Number of messages written"})
 
+// This is a workaround to handle https://issues.apache.org/jira/browse/KAFKA-3593
+var lastMessage = time.Now()
+
 var config = initConfig()
 var aggregations = initAggregationSpecs()
 
@@ -321,6 +324,7 @@ func processMessage(e *kafka.Message) {
 	offsetCache[eventTime][e.TopicPartition.Partition] = int64(e.TopicPartition.Offset)
 
 	inCounter.Inc()
+	lastMessage = time.Now()
 }
 
 // TODO: Add validation for aggregation rules (and metrics?)
@@ -373,6 +377,11 @@ func main() {
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 		case <-ticker.C:
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
+			// if the window size has passed and no messages have been received, die in case
+			// https://issues.apache.org/jira/browse/KAFKA-3593 is occurring.
+			if time.Now().Sub(lastMessage) > windowSize {
+				log.Fatalf("No messages received since %v", lastMessage)
+			}
 
 		case ev := <-c.Events():
 			switch e := ev.(type) {
