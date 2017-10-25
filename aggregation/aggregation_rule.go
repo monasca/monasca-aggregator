@@ -151,6 +151,15 @@ func (a *Rule) MatchesMetric(newMetric models.MetricEnvelope) bool {
 		}
 	}
 
+	if a.RejectedDimensions != nil {
+		if newMetric.Metric.Dimensions == nil {
+			result = false
+		}
+		if rejectDimensions(a.RejectedDimensions, newMetric.Metric.Dimensions) {
+			result = false
+		}
+	}
+
 	if a.GroupedDimensions != nil {
 		if newMetric.Metric.Dimensions == nil {
 			result = false
@@ -175,6 +184,17 @@ outer:
 		return false
 	}
 	return true
+}
+
+func rejectDimensions(dimensionsSpec map[string]string, actual map[string]string) bool {
+	for sKey, sValue := range dimensionsSpec {
+		for aKey, aValue := range actual {
+			if sKey == aKey && (sValue == "" || sValue == aValue) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func matchDimensionKeys(keySpec []string, actual map[string]string) bool {

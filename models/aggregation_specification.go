@@ -19,6 +19,7 @@ type AggregationSpecification struct {
 	Function             string
 	FilteredMetricName   string
 	FilteredDimensions   map[string]string
+	RejectedDimensions   map[string]string
 	GroupedDimensions    []string
 	AggregatedMetricName string
 	Rollup
