@@ -29,10 +29,19 @@ filteredDimensions:
   service: monitoring
 ```
 
+## Rejected Dimensions
+This is a map of key-value pairs to reject if present in the input stream.
+A value of `""` denotes that all values for that key should be rejected. E.g.
+```
+rejectedDimensions:
+  hostname: inactive-host
+  device: ""
+```
+
 ## Grouped Dimensions
 This is a list of dimension keys to be combined into groups. Each new value found for a particular key will create
 a new group. If multiple keys are listed, each group will be a specific combination of values. Each group will
-be output as a separate metric, and will include the specific groups dimension values. E.g.
+be output as a separate metric, and will include the specific group's dimension values. E.g.
 ```
 groupedDimensions:
   - hostname

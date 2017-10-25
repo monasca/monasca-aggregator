@@ -12,6 +12,10 @@ A high-speed near real-time continuous aggregation micro-service for Monasca wit
 
 * Filter metrics by dimension (name, value) pairs.
 
+* Reject metrics by dimension (name, value) pairs.
+
+* Reject metrics by dimension name.
+
 * Group by metric dimension names.
 
 * Write aggregated metrics using a specified aggregated name.
