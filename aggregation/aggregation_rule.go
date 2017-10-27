@@ -36,6 +36,15 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
 	if aggSpec.Function == "" {
 		log.Fatalf("Rule %s must have a function", aggSpec.Name)
 	}
+outer:
+	for _, rKey := range aggSpec.Rollup.GroupedDimensions {
+		for _, key := range aggSpec.GroupedDimensions {
+			if key == rKey {
+				continue outer
+			}
+		}
+		log.Fatalf("Grouped key %s in rollup must appear in main grouped keys", rKey)
+	}
 
 	return Rule{
 		AggregationSpecification: aggSpec,
