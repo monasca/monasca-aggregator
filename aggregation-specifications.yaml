@@ -8,7 +8,7 @@ aggregationSpecifications:
     aggregatedMetricName: aggregated-metric1
     filteredMetricName: metric1
     filteredDimensions:
-        hostname: test-01
+      hostname: test-01
     function: sum
 
   - name: Aggregation2
@@ -31,3 +31,15 @@ aggregationSpecifications:
       function: sum
       groupedDimensions:
         - service
+
+  - name: Aggregation4
+    aggregatedMetricName: aggregated-metric4
+    filteredMetricName: metric4
+    filteredDimensions:
+      cluster: test-cluster-01
+    rejectedDimensions:
+      hostname: inactive-host
+      device: "" # use this to reject all values of a dimension
+    groupedDimensions:
+      - hostname
+    function: count

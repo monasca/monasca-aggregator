@@ -172,7 +172,7 @@ func initProducer(bootstrapServers string) *kafka.Producer {
 		log.Fatalf("Failed to create producer: %s", err)
 	}
 
-	log.Infof("Created Producer %v", p)
+	log.Infof("Created kafka producer %v", p)
 
 	return p
 }
