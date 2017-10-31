@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -48,8 +49,10 @@ var outCounter = prometheus.NewCounter(
 		Name: "out_messages",
 		Help: "Number of messages written"})
 
+var processedSinceLastPublish = 0
+
 // This is a workaround to handle https://issues.apache.org/jira/browse/KAFKA-3593
-var lastMessage = time.Now()
+var lastMessage = time.Now().UTC()
 
 var config = initConfig()
 var aggregations = initAggregationSpecs()
@@ -213,6 +216,8 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	log.Debugf("currentTimeWindow: %d", currentTimeWindow)
 	log.Debugf("Publishing metrics in window %d", activeTimeWindow)
 
+	startTime := time.Now().UTC()
+	metricsOut := 0
 	for _, rule := range aggregationRules {
 	windowLoop:
 		for windowTime := range rule.Windows {
@@ -226,15 +231,23 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 
 				outbound <- &kafka.Message{TopicPartition: kafka.TopicPartition{Topic: topic, Partition: kafka.PartitionAny}, Value: []byte(value)}
 				outCounter.Inc()
+				metricsOut++
 			}
 		}
 	}
+	duration := time.Now().UTC().Sub(startTime)
+	mem := runtime.MemStats{}
+	runtime.ReadMemStats(&mem)
+	memoryMB := float64(mem.Alloc) / 1024.0 / 1024.0
+	log.Infof("Processed %d messages, %d aggregations published in %f seconds, current memory: %f",
+		processedSinceLastPublish, metricsOut, duration.Seconds(), memoryMB)
 
 	// TODO: Confirm messages published before committing offsets
 	offsetList := maxOffsets(activeTimeWindow)
 	commitOffsets(offsetList, topic, c)
 
 	deleteInactiveTimeWindows(activeTimeWindow)
+	processedSinceLastPublish = 0
 }
 
 func maxOffsets(eventTime int64) map[int32]int64 {
@@ -324,7 +337,8 @@ func processMessage(e *kafka.Message) {
 	offsetCache[eventTime][e.TopicPartition.Partition] = int64(e.TopicPartition.Offset)
 
 	inCounter.Inc()
-	lastMessage = time.Now()
+	lastMessage = time.Now().UTC()
+	processedSinceLastPublish++
 }
 
 // TODO: Add validation for aggregation rules (and metrics?)
@@ -357,18 +371,31 @@ func main() {
 
 	go handleProducerEvents(p)
 
-	log.Info("Started monasca-aggregation")
-
-	// align to time boundaries?
-	firstTick := firstTick()
-	var ticker = new(time.Ticker)
-
 	go func() {
 		// Start prometheus endpoint
 		http.Handle("/metrics", promhttp.Handler())
 		log.Fatal(http.ListenAndServe(prometheusEndpoint, nil))
 	}()
 	log.Infof("Serving metrics on %s/metrics", prometheusEndpoint)
+
+	go func() {
+		// Monitor memory usage and die if it exceeds configured value
+		mem := runtime.MemStats{}
+		for true {
+			time.Sleep(time.Second*15)
+			runtime.ReadMemStats(&mem)
+			if mem.Alloc > 1024 * 1024 * 120 {
+				// 120M max memory
+				log.Fatalf("Exceeded memory limits: %d", mem.Alloc)
+			}
+		}
+	}()
+
+	log.Info("Started monasca-aggregation")
+
+	// align to time boundaries?
+	firstTick := firstTick()
+	var ticker = new(time.Ticker)
 
 	for true {
 		select {
@@ -379,7 +406,7 @@ func main() {
 			publishAggregations(p.ProduceChannel(), &producerTopic, c)
 			// if the window size has passed and no messages have been received, die in case
 			// https://issues.apache.org/jira/browse/KAFKA-3593 is occurring.
-			if time.Now().Sub(lastMessage) > windowSize {
+			if time.Now().UTC().Sub(lastMessage) > windowSize {
 				log.Fatalf("No messages received since %v", lastMessage)
 			}
 

@@ -2,13 +2,13 @@ logging:
 #  file: monasca-aggregation.log
   level: INFO
 
-windowSize: 10
+windowSize: 600
 windowLag: 2
 consumerTopic: metrics
 producerTopic: metrics
 
 kafka:
-  bootstrap.servers: localhost:9092
+  bootstrap.servers: ms-monasca-kafka:9092
   group.id: monasca-aggregation
 
 prometheus:
