@@ -378,19 +378,22 @@ func main() {
 	}()
 	log.Infof("Serving metrics on %s/metrics", prometheusEndpoint)
 
-	go func() {
-		// Monitor memory usage and die if it exceeds the value
-		mem := runtime.MemStats{}
-		for true {
-			time.Sleep(time.Second*15)
-			runtime.ReadMemStats(&mem)
-			if mem.Alloc > 1024 * 1024 * 120 {
-				// 120M max memory
-				log.Fatalf(" Processed %d messages, exceeded memory limits: %d",
-					processedSinceLastPublish, mem.Alloc)
+	maxMemory := uint64(config.GetInt("maxMemory") * 1024 * 1024)
+	if maxMemory > 0 {
+		go func() {
+			// Monitor memory usage and die if it exceeds the value
+			mem := runtime.MemStats{}
+			for true {
+				time.Sleep(time.Second * 15)
+				runtime.ReadMemStats(&mem)
+				if mem.Alloc > maxMemory {
+					// 120M max memory
+					log.Fatalf("Processed %d messages, exceeded memory limits: %d",
+						processedSinceLastPublish, mem.Alloc)
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	log.Info("Started monasca-aggregation")
 
