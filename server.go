@@ -239,7 +239,7 @@ func publishAggregations(outbound chan *kafka.Message, topic *string, c *kafka.C
 	mem := runtime.MemStats{}
 	runtime.ReadMemStats(&mem)
 	memoryMB := float64(mem.Alloc) / 1024.0 / 1024.0
-	log.Infof("Processed %d messages, %d aggregations published in %f seconds, current memory: %f",
+	log.Infof("Processed %d messages, %d aggregations published in %f seconds, current heap: %f",
 		processedSinceLastPublish, metricsOut, duration.Seconds(), memoryMB)
 
 	// TODO: Confirm messages published before committing offsets
@@ -379,14 +379,15 @@ func main() {
 	log.Infof("Serving metrics on %s/metrics", prometheusEndpoint)
 
 	go func() {
-		// Monitor memory usage and die if it exceeds configured value
+		// Monitor memory usage and die if it exceeds the value
 		mem := runtime.MemStats{}
 		for true {
 			time.Sleep(time.Second*15)
 			runtime.ReadMemStats(&mem)
 			if mem.Alloc > 1024 * 1024 * 120 {
 				// 120M max memory
-				log.Fatalf("Exceeded memory limits: %d", mem.Alloc)
+				log.Fatalf(" Processed %d messages, exceeded memory limits: %d",
+					processedSinceLastPublish, mem.Alloc)
 			}
 		}
 	}()
