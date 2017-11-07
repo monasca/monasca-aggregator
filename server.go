@@ -179,6 +179,7 @@ func initProducer(bootstrapServers string) *kafka.Producer {
 
 func handleProducerEvents(p *kafka.Producer) {
 	for e := range p.Events() {
+		log.Infof("Caught producer event %v", e)
 		switch ev := e.(type) {
 		case *kafka.Message:
 			m := ev
