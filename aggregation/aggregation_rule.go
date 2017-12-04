@@ -36,6 +36,9 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
 	if aggSpec.Function == "" {
 		log.Fatalf("Rule %s must have a function", aggSpec.Name)
 	}
+	if len(aggSpec.GroupedDimensions) == 0 && len(aggSpec.Rollup.GroupedDimensions) != 0 {
+		log.Fatalf("Rule %s must have grouped dimensions when group dimensions ares defined in rollup", aggSpec.Name)
+	}
 
 	return Rule{
 		AggregationSpecification: aggSpec,
