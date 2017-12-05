@@ -20,10 +20,11 @@ import (
 )
 func TestCheckSubArray(t *testing.T) {
 	array := []string{"hostname", "service", "podname", "path"}
-	sub_array1 := []string{"path"}
-	assert.Equal(t, true, CheckSubArray(sub_array1, array))
-	sub_array2 := []string{"path", "Test"}
-	assert.Equal(t, false, CheckSubArray(sub_array2, array))
-	empty_array := []string{}
-	assert.Equal(t, true, CheckSubArray(empty_array, array))
+	subArray1 := []string{"path"}
+	assert.Equal(t, true, CheckSubArray(subArray1, array))
+	subArray2 := []string{"path", "Test"}
+	assert.Equal(t, false, CheckSubArray(subArray2, array))
+	emptyArray := []string{}
+	assert.Equal(t, true, CheckSubArray(emptyArray, array))
+	assert.Equal(t, false, CheckSubArray(subArray1, emptyArray))
 }
