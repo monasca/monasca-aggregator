@@ -19,10 +19,10 @@ func CheckSubArray(subArray []string, array []string) (isSubArray bool) {
 	if len(subArray) == 0 {
 		return true
 	}
-	for _, sub_a := range subArray {
+	for _, subElement := range subArray {
 		isSubArray = false
 		for _, v := range array {
-			if sub_a == v {
+			if subElement == v {
 				isSubArray = true
 				break
 			}
