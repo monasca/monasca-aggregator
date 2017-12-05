@@ -31,6 +31,7 @@ import (
 
 	"github.com/monasca/monasca-aggregator/aggregation"
 	"github.com/monasca/monasca-aggregator/models"
+	"github.com/cydev/zero"
 )
 
 var windowSize time.Duration
@@ -131,8 +132,13 @@ func initAggregationRules(specifications []models.AggregationSpecification) []ag
 	var rules = make([]aggregation.Rule, len(specifications))
 	i := 0
 	for _, spec := range specifications {
-		rules[i] = aggregation.NewAggregationRule(spec)
-		i++
+		rule, err := aggregation.NewAggregationRule(spec)
+		if !zero.IsZero(rule) && err == nil {
+			rules[i] = rule
+			i++
+		} else {
+			log.Fatalf(err.Error())
+		}
 		log.Infof("New Spec: %v", spec)
 	}
 	return rules
