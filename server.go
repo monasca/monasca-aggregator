@@ -31,7 +31,6 @@ import (
 
 	"github.com/monasca/monasca-aggregator/aggregation"
 	"github.com/monasca/monasca-aggregator/models"
-	"github.com/cydev/zero"
 )
 
 var windowSize time.Duration
