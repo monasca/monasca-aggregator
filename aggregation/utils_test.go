@@ -18,6 +18,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func TestCheckInArray(t *testing.T) {
+	array := []string{"hostname", "service", "podname", "path"}
+	string := "path"
+	assert.Equal(t, true, CheckInArray(string, array))
+	emptyString := ""
+	assert.Equal(t, false, CheckInArray(emptyString, array))
+	stringNotInArray := "test"
+	assert.Equal(t, false, CheckInArray(stringNotInArray, array))
+}
+
 func TestCheckSubArray(t *testing.T) {
 	array := []string{"hostname", "service", "podname", "path"}
 	subArray1 := []string{"path"}

@@ -15,21 +15,25 @@
 package aggregation
 
 func CheckSubArray(subArray []string, array []string) (isSubArray bool) {
-	// empty array is a sub array of all arraies
+	// empty array is a sub array of all arrays
 	if len(subArray) == 0 {
 		return true
 	}
 	for _, subElement := range subArray {
-		isSubArray = false
-		for _, v := range array {
-			if subElement == v {
-				isSubArray = true
-				break
-			}
-		}
-		if !isSubArray {
-			return isSubArray
+		isInArray := CheckInArray(subElement, array)
+		if !isInArray {
+			return false
 		}
 	}
-	return isSubArray
+	return true
+}
+
+func CheckInArray(str string, array[]string) (isInArray bool) {
+	// Check if individual string is in target array
+	for _, strArray := range array {
+		if str == strArray {
+			return true
+		}
+	}
+	return false
 }

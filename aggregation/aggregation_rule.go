@@ -38,7 +38,7 @@ func NewAggregationRule(aggSpec models.AggregationSpecification) (Rule, error) {
 	}
 	//check when rollup.groupedDimensions is not a subset of groupedDimensions
 	if !CheckSubArray(aggSpec.Rollup.GroupedDimensions, aggSpec.GroupedDimensions) {
-		return Rule{}, fmt.Errorf("Rule %s must have rollup.groupedDimensions as a sub array of groupedDimensions", aggSpec.Name)
+		return Rule{}, fmt.Errorf("Rule %s must have all rollup.groupedDimensions also in groupedDimensions", aggSpec.Name)
 	}
 	return Rule{
 		AggregationSpecification: aggSpec,

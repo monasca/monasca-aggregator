@@ -30,7 +30,7 @@ func TestAggregationRuleWithBadRollUpDim(t *testing.T) {
 		groupDim, "aggregated-metric",
 		rollUpSpec}
 	_, err := NewAggregationRule(spec)
-	assert.Equal(t, err.Error(), "Rule Aggregation must have rollup.groupedDimensions as a sub array of groupedDimensions")
+	assert.Equal(t, err.Error(), "Rule Aggregation must have all rollup.groupedDimensions also in groupedDimensions")
 }
 
 func TestAggregationRuleWithBadDim(t *testing.T) {
@@ -43,7 +43,7 @@ func TestAggregationRuleWithBadDim(t *testing.T) {
 		groupDim, "aggregated-metric",
 		rollUpSpec}
 	_, err := NewAggregationRule(spec)
-	assert.Equal(t, err.Error(), "Rule Aggregation must have rollup.groupedDimensions as a sub array of groupedDimensions")
+	assert.Equal(t, err.Error(), "Rule Aggregation must have all rollup.groupedDimensions also in groupedDimensions")
 }
 
 func TestAggregationRuleWithGoodDim(t *testing.T) {
