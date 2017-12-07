@@ -16,9 +16,9 @@ package aggregation
 
 import (
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/monasca/monasca-aggregator/models"
 	"time"
+	"fmt"
 )
 
 type Rule struct {
@@ -26,21 +26,24 @@ type Rule struct {
 	MetricCache
 }
 
-func NewAggregationRule(aggSpec models.AggregationSpecification) Rule {
+func NewAggregationRule(aggSpec models.AggregationSpecification) (Rule, error) {
 	if aggSpec.AggregatedMetricName == "" {
-		log.Fatalf("Rule %s must have an aggregated metric name", aggSpec.Name)
+		return Rule{}, fmt.Errorf("Rule %s must have an aggregated metric name", aggSpec.Name)
 	}
 	if aggSpec.FilteredMetricName == "" {
-		log.Fatalf("Rule %s must have a filtered metric name", aggSpec.Name)
+		return Rule{}, fmt.Errorf("Rule %s must have a filtered metric name", aggSpec.Name)
 	}
 	if aggSpec.Function == "" {
-		log.Fatalf("Rule %s must have a function", aggSpec.Name)
+		return Rule{}, fmt.Errorf("Rule %s must have a function", aggSpec.Name)
 	}
-
+	//check when rollup.groupedDimensions is not a subset of groupedDimensions
+	if !CheckSubArray(aggSpec.Rollup.GroupedDimensions, aggSpec.GroupedDimensions) {
+		return Rule{}, fmt.Errorf("Rule %s must have all rollup.groupedDimensions also in groupedDimensions", aggSpec.Name)
+	}
 	return Rule{
 		AggregationSpecification: aggSpec,
 		MetricCache:              NewMetricCache(),
-	}
+	}, nil
 }
 
 func (a *Rule) AddMetric(metricEnvelope models.MetricEnvelope, windowSize time.Duration) {

@@ -131,7 +131,11 @@ func initAggregationRules(specifications []models.AggregationSpecification) []ag
 	var rules = make([]aggregation.Rule, len(specifications))
 	i := 0
 	for _, spec := range specifications {
-		rules[i] = aggregation.NewAggregationRule(spec)
+		rule, err := aggregation.NewAggregationRule(spec)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+		rules[i] = rule
 		i++
 		log.Infof("New Spec: %v", spec)
 	}
