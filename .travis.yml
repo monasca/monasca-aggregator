@@ -4,6 +4,7 @@ language: go
 addons:
   apt:
     packages:
+    - librdkafka
     - librdkafka-dev
 before_install:
 - go get github.com/Masterminds/glide
