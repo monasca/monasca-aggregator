@@ -1,22 +1,22 @@
 hash: 3bd57e9b45a1c3a1369f3ddb47117921974b7e16b814ca7da981baea4fc88619
-updated: 2017-06-21T15:27:27.387954649-06:00
+updated: 2017-12-06T16:57:41.40370185-07:00
 imports:
 - name: github.com/beorn7/perks
   version: 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
   subpackages:
   - quantile
 - name: github.com/confluentinc/confluent-kafka-go
-  version: a9b5c269c66e9a2eb5f195563b2f01e65a84c527
+  version: f696f02dcbb04d95b103c5b848bb15f749a996f7
   subpackages:
   - kafka
 - name: github.com/fsnotify/fsnotify
   version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/golang/protobuf
-  version: e325f446bebc2998605911c0a2650d9920361d4a
+  version: 1e59b77b52bf8e4b449a57e6f79f21226d571845
   subpackages:
   - proto
 - name: github.com/hashicorp/hcl
-  version: 392dba7d905ed5d04a5794ba89f558b27e2ba1ca
+  version: 23c074d0eceb2b8a5bfdbb271ab780cde70f05a8
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -27,59 +27,76 @@ imports:
   - json/scanner
   - json/token
 - name: github.com/magiconair/properties
-  version: 51463bfca2576e06c62a8504b5c0f06d61312647
+  version: 49d762b9817ba1c2e9d0c69183c2b4a8b8f1d934
+  subpackages:
+  - assert
 - name: github.com/matttproud/golang_protobuf_extensions
   version: c12348ce28de40eed0136aa2b644d0ee0650e56c
   subpackages:
   - pbutil
 - name: github.com/mitchellh/mapstructure
-  version: d0303fe809921458f417bcf828397a65db30a7e4
-- name: github.com/pelletier/go-buffruneio
-  version: c37440a7cf42ac63b919c752ca73a85067e05992
+  version: 06020f85339e21b2478f756a78e295255ffa4d6a
 - name: github.com/pelletier/go-toml
-  version: fe7536c3dee2596cdd23ee9976a17c22bdaae286
+  version: 4e9e0ee19b60b13eb79915933f44d8ed5f268bdd
 - name: github.com/prometheus/client_golang
-  version: de4d4ffe63b9eff7f27484fdef6e421597e6abb4
+  version: 661e31bf844dfca9aeba15f27ea8aa0d485ad212
   subpackages:
   - prometheus
   - prometheus/promhttp
 - name: github.com/prometheus/client_model
-  version: 6f3806018612930941127f2a7c6c453ba2c527d2
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 1f00413b80e5953826db4f62a74bc417f9344ba3
+  version: 2e54d0b93cba2fd133edc32211dcc32c06ef72ca
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: a3bfc74126ea9e45ee5d5c6f7fc86191b7d488fb
+  version: a6e9df898b1336106c743392c48ee0b71f5c4efa
   subpackages:
   - xfs
 - name: github.com/Sirupsen/logrus
-  version: 202f25545ea4cf9b191ff7f846df5d87c9382c2b
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
 - name: github.com/spf13/afero
-  version: 9be650865eab0c12963d8753212f4f9c66cdcf12
+  version: 8d919cbe7e2627e417f3e45c3c0e489a5b7e2536
   subpackages:
   - mem
 - name: github.com/spf13/cast
   version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/jwalterweatherman
-  version: 0efa5202c04663c757d84f90f5219c1250baf94f
+  version: 12bd96e66386c1960ab0f74ced1362f66f552f7b
 - name: github.com/spf13/pflag
-  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+  version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/spf13/viper
-  version: c1de95864d73a5465492829d7cb2dd422b19ac96
+  version: 4dddf7c62e16bce5807744018f5b753bfe21bbd2
+- name: golang.org/x/crypto
+  version: 94eea52f7b742c7cbe0b03b22f0c4c8631ece122
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/sys
-  version: fb4cac33e3196ff7f507ab9b2d2a44b0142f5b5a
+  version: 9167dbfd0f8e88b731dd88cbf73a270701a37bb4
   subpackages:
   - unix
+  - windows
 - name: golang.org/x/text
-  version: 4e9ab9ee170f2a39bd66c92b3e0a47ff47a4bc77
+  version: 57961680700a5336d15015c8c50686ca5ba362a4
   subpackages:
   - transform
   - unicode/norm
 - name: gopkg.in/yaml.v2
-  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
-testImports: []
+  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
+testImports:
+- name: github.com/davecgh/go-spew
+  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 2aa2c176b9dab406a6970f6a55f513e8a8c8b18f
+  subpackages:
+  - assert
