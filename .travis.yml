@@ -4,13 +4,13 @@ language: go
 addons:
   apt:
     packages:
-    - librdkafka
     - librdkafka-dev
 before_install:
 - go get github.com/Masterminds/glide
 - cd $GOPATH/src/github.com/Masterminds/glide && git checkout 84607742b10f492430762d038e954236bbaf23f7 && go install && cd -
 install:
 - glide install
+- dpkg -l | grep kafka
 - go get -u gopkg.in/alecthomas/gometalinter.v1
 - go get -u github.com/golang/lint/golint
 - go test ./...
