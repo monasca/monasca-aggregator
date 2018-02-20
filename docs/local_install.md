@@ -9,6 +9,9 @@ Kafka requires a running instance of Apache Zookeeper.
 [Zookeeper startup guide](https://zookeeper.apache.org/doc/trunk/zookeeperStarted.html)
 
 ## Installing
+Run glide install to download and install all go dependencies of the engine. Refer to 
+https://github.com/confluentinc/confluent-kafka-go for instructions on installing
+librdkafka.
 You can use the ```go build``` command to create a binary of the aggregation engine
 if desired. Otherwise, ```go run server.go``` in the top directory of the repo
 will compile and run the engine.
