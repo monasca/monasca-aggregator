@@ -10,7 +10,10 @@ before_install:
 - cd $GOPATH/src/github.com/Masterminds/glide && git checkout 84607742b10f492430762d038e954236bbaf23f7 && go install && cd -
 install:
 - glide install
+- dpkg -l | grep kafka
 - go get -u gopkg.in/alecthomas/gometalinter.v1
 - go get -u github.com/golang/lint/golint
+- go test ./...
+- go build server.go
 script:
 - gometalinter.v1 ./... --config=linterconfig.json --vendor
